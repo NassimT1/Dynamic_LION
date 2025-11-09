@@ -1,6 +1,6 @@
 model:
   # Required model paths
-  bert_model: "/path/to/bert-base-uncased/"
+  bert_model: "weights/bert-base-uncased/"
   vit_model: "weights/eva_vit_g.pth"
   llm_model: "/path/to/flan-t5-xl/"
   ram_model: "weights/ram_swin_large_14m.pth"
