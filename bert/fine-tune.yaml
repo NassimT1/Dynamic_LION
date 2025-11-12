@@ -1,0 +1,6 @@
+dataset_path: "Dataset/MS_COCO_2017_tags_embeddings.parquet"
+batch_size: 16
+test_ratio: 0.05
+model_id: "bert-base-uncased"
+in_dim: 768
+out_dim: 2048
