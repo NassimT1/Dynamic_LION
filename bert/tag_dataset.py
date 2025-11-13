@@ -1,4 +1,5 @@
 import torch
+import random
 
 from torch.utils.data import Dataset
 
@@ -13,6 +14,9 @@ class TagEmbeddingsDataset(Dataset):
     def __len__(self):
         return len(self.tags)
 
+    def rand_idx(self):
+        return random.randint(0, self.__len__())
+
     def __getitem__(self, idx):
         tags = self.tags[idx]
         tokens = self.tokenizer(
@@ -24,4 +28,6 @@ class TagEmbeddingsDataset(Dataset):
         )
         tokens = {k: v.squeeze(0) for k, v in tokens.items()}
         embeddings = torch.tensor(self.v_caps[idx], dtype=torch.float32)
-        return tokens, embeddings
+        rand_idx = self.rand_idx()
+        embeddings_neg = torch.tensor(self.v_caps[rand_idx], dtype=torch.float32)
+        return tokens, embeddings, embeddings_neg

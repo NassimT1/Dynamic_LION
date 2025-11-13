@@ -69,12 +69,12 @@ if __name__ == "__main__":
     for i in tqdm(range(epochs)):
         bert.train()
         total_loss = 0
-        for tokens, embs in train_loader:
+        for tokens, embs, embs_neg in train_loader:
             tokens = {k: v.to(device) for k, v in tokens.items()}
             embs = embs.to(device)
 
             preds = bert(tokens)
-            loss = loss_fn(preds, embs)
+            loss = loss_fn(preds, embs, embs_neg)
 
             optimizer.zero_grad()
             loss.backward()
@@ -86,9 +86,9 @@ if __name__ == "__main__":
         bert.eval()
         with torch.no_grad():
             val_loss = 0
-            for tokens, embs in test_loader:
+            for tokens, embs, embs_neg in test_loader:
                 tokens = {k: v.to(device) for k, v in tokens.items()}
                 embs = embs.to(device)
                 preds = bert(**tokens)
-                val_loss += loss_fn(preds, embs).item()
+                val_loss += loss_fn(preds, embs, embs_neg).item()
             print(f"Validation loss = {val_loss / len(test_loader):.4f}")
