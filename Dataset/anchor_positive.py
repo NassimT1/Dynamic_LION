@@ -33,9 +33,6 @@ def convert_dataset_into_triplet(
         v_cap = np.array(v_cap, dtype=np.float32)
         vis_caps.append(v_cap)
 
-    text_embs = np.array(text_embs)
-    vis_caps = np.array(vis_caps)
-
     out_df = pd.DataFrame(
         {
             "tag_embeddings": text_embs,
