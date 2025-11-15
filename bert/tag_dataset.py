@@ -19,15 +19,14 @@ class TagEmbeddingsDataset(Dataset):
 
     def __getitem__(self, idx):
         tags = self.tags[idx]
-        tokens = self.tokenizer(
+        tag_embs = self.tokenizer(
             tags,
             truncation=True,
             padding="max_length",
-            max_length=32,
             return_tensors="pt",
         )
-        tokens = {k: v.squeeze(0) for k, v in tokens.items()}
-        embeddings = torch.tensor(self.v_caps[idx], dtype=torch.float32)
+        tag_embs = {k: v.squeeze(0) for k, v in tag_embs.items()}
+        cap_embeddings = torch.tensor(self.v_caps[idx], dtype=torch.float32)
         rand_idx = self.rand_idx()
-        embeddings_neg = torch.tensor(self.v_caps[rand_idx], dtype=torch.float32)
-        return tokens, embeddings, embeddings_neg
+        cap_neg_embeddings = torch.tensor(self.v_caps[rand_idx], dtype=torch.float32)
+        return tag_embs, cap_embeddings, cap_neg_embeddings
