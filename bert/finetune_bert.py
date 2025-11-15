@@ -59,7 +59,7 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"{device} loaded")
 
-    bert = BertTagEmbeddings(cfg["model_id"], cfg["in_dim"], cfg["out_dim"])
+    bert = BertTagEmbeddings(cfg["model_id"])
     bert.to(device)
 
     loss_fn = torch.nn.TripletMarginLoss()
@@ -69,11 +69,11 @@ if __name__ == "__main__":
     for i in tqdm(range(epochs)):
         bert.train()
         total_loss = 0
-        for tokens, embs, embs_neg in train_loader:
-            tokens = {k: v.to(device) for k, v in tokens.items()}
+        for tag_embs, embs, embs_neg in train_loader:
+            tag_embs = {k: v.to(device) for k, v in tag_embs.items()}
             embs = embs.to(device)
 
-            preds = bert(tokens)
+            preds = bert(tag_embs)
             loss = loss_fn(preds, embs, embs_neg)
 
             optimizer.zero_grad()
@@ -92,3 +92,5 @@ if __name__ == "__main__":
                 preds = bert(**tokens)
                 val_loss += loss_fn(preds, embs, embs_neg).item()
             print(f"Validation loss = {val_loss / len(test_loader):.4f}")
+
+    torch.save(bert.state_dict(), "bert_embeddings.pt")
