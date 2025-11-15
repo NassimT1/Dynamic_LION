@@ -4,11 +4,14 @@ import torch
 import pandas as pd
 import numpy as np
 
-from tag_dataset import TagEmbeddingsDataset
+from bert.tag_dataset import TagEmbeddingsDataset
 from bert_model import BertTagEmbeddings
+from bert.trainer import Trainer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def load_dataset(path: str = "Dataset/MS_COCO_2017_tags_embeddings.parquet"):
@@ -35,62 +38,60 @@ def split_dataset(dataset: pd.DataFrame, test_ratio: float = 0.1):
     return train_tags, test_tags, train_v_caps, test_v_caps
 
 
-def prepare_dataset(path: str, test_ratio: float):
+def prepare_dataset(
+    path: str, test_ratio: float, batch_size: int, tokenizer: AutoTokenizer
+):
     dset = load_dataset(path)
-    return split_dataset(dset, test_ratio)
+    train_tags, test_tags, train_v_caps, test_v_caps = split_dataset(dset, test_ratio)
+
+    train_dset = TagEmbeddingsDataset(train_tags, train_v_caps, tokenizer)
+    train_loader = DataLoader(train_dset, batch_size=batch_size, shuffle=True)
+
+    test_dset = TagEmbeddingsDataset(test_tags, test_v_caps, tokenizer)
+    test_loader = DataLoader(test_dset, batch_size=batch_size)
+    return train_loader, test_loader
+
+
+def prepare_models(model_id: str, device: str = "cuda"):
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    bert = BertTagEmbeddings(model_id)
+    bert.to(device)
+    return tokenizer, bert
 
 
 if __name__ == "__main__":
     with open("bert/fine-tune.yaml", "r") as f:
         cfg = yaml.safe_load(f)
 
-    train_tags, test_tags, train_v_caps, test_v_caps = prepare_dataset(
-        cfg["dataset_path"], cfg["test_ratio"]
-    )
-
-    tokenizer = AutoTokenizer.from_pretrained(cfg["model_id"])
-
-    train_dset = TagEmbeddingsDataset(train_tags, train_v_caps, tokenizer)
-    train_loader = DataLoader(train_dset, batch_size=cfg["batch_size"], shuffle=True)
-
-    test_dset = TagEmbeddingsDataset(test_tags, test_v_caps, tokenizer)
-    test_loader = DataLoader(train_dset, batch_size=cfg["batch_size"])
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"{device} loaded")
 
-    bert = BertTagEmbeddings(cfg["model_id"])
-    bert.to(device)
+    n_epochs = cfg["n_epochs"]
+    tokenizer, bert = prepare_models(cfg["model_id"], device)
 
-    loss_fn = torch.nn.TripletMarginLoss()
-    optimizer = torch.optim.AdamW(bert.parameters(), lr=5e-5)
+    train_loader, val_loader = prepare_dataset(
+        cfg["dataset_path"], cfg["test_ratio"], cfg["batch_size"], tokenizer
+    )
 
-    epochs = 1
-    for i in tqdm(range(epochs)):
-        bert.train()
-        total_loss = 0
-        for tag_embs, embs, embs_neg in train_loader:
-            tag_embs = {k: v.to(device) for k, v in tag_embs.items()}
-            embs = embs.to(device)
+    triplet_loss = torch.nn.TripletMarginLoss()
+    adamw = torch.optim.AdamW(bert.parameters(), lr=5e-5)
+    metrics = {
+        "cosine_similarity": cosine_similarity,
+        "roc_auc_score": roc_auc_score,
+    }
 
-            preds = bert(tag_embs)
-            loss = loss_fn(preds, embs, embs_neg)
+    trainer = Trainer(
+        model=bert,
+        n_epochs=n_epochs,
+        validate_every=5,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        loss_fn=triplet_loss,
+        optimizer=adamw,
+        metrics=metrics,
+        log_path="bert/logs/bert_hist.csv",
+    )
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+    trainer.train()
 
-            total_loss += loss.item()
-        print(f"Epoch {i}: train loss = {total_loss / len(train_loader):.4f}")
-
-        bert.eval()
-        with torch.no_grad():
-            val_loss = 0
-            for tokens, embs, embs_neg in test_loader:
-                tokens = {k: v.to(device) for k, v in tokens.items()}
-                embs = embs.to(device)
-                preds = bert(**tokens)
-                val_loss += loss_fn(preds, embs, embs_neg).item()
-            print(f"Validation loss = {val_loss / len(test_loader):.4f}")
-
-    torch.save(bert.state_dict(), "bert_embeddings.pt")
+    torch.save(bert.state_dict(), "bert/bert_embeddings.pt")
