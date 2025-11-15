@@ -17,7 +17,7 @@ class Trainer:
         loss_fn,
         optimizer,
         metrics: dict[str, Callable],
-        log_path: str | None = "bert/logs/bert_hist.csv",
+        log_path: str | None = "bert/bert_hist.csv",
     ):
         self.model = model
         self.n_epochs = n_epochs
@@ -86,8 +86,13 @@ class Trainer:
             metric_str = "pos_"
         else:
             metric_str = "neg_"
+        y_true = y_true.detach().numpy()
+        y_pred = y_pred.detach().numpy()
         metrics = {}
         for metric, metric_fn in self.metrics.items():
+            if metric == "roc_aur_score":
+                y_true = y_true[0]
+                y_pred = y_pred[0]
             result = metric_fn(y_true, y_pred)
             metrics[metric_str + metric] = result
         return metrics
@@ -125,7 +130,7 @@ class Trainer:
             "pos_roc_score": total_pos_roc_aur,
             "neg_roc_score": total_neg_roc_aur,
         }
-        self.log_step(history)
+        self.log_step(history, True)
 
     def validation_step(self, x, pos, neg):
         history = {"epoch": self.curr_epoch, "step": -1, "split": "train"}
@@ -154,16 +159,18 @@ class Trainer:
         split = history["split"]
         loss = history["loss"]
         pos_cos = history["pos_cosine_similarity"]
-        pos_roc_aur = history["pos_roc_score"]
+        # pos_roc_aur = history["pos_roc_score"]
         neg_cos = history["neg_cosine_similarity"]
-        neg_roc_aur = history["neg_roc_score"]
+        # neg_roc_aur = history["neg_roc_score"]
 
         with open(self.log_path, "a") as f:
             f.write(
-                f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos},{pos_roc_aur},{neg_roc_aur}"
+                # f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos},{pos_roc_aur},{neg_roc_aur}"
+                f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos},"
             )
         if verbose:
             epoch = self.curr_epoch
             print(
-                f"Epoch {epoch}: train loss: {loss}, cos_sim: {pos_cos}, roc_aur: {pos_roc_aur}"
+                # f"Epoch {epoch}: train loss: {loss}, cos_sim: {pos_cos}, roc_aur: {pos_roc_aur}"
+                f"Epoch {epoch}: train loss: {loss}, cos_sim: {pos_cos}"
             )

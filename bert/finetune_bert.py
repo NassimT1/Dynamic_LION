@@ -4,9 +4,9 @@ import torch
 import pandas as pd
 import numpy as np
 
-from bert.tag_dataset import TagEmbeddingsDataset
+from tag_dataset import TagEmbeddingsDataset
 from bert_model import BertTagEmbeddings
-from bert.trainer import Trainer
+from trainer import Trainer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     adamw = torch.optim.AdamW(bert.parameters(), lr=5e-5)
     metrics = {
         "cosine_similarity": cosine_similarity,
-        "roc_auc_score": roc_auc_score,
+        # "roc_auc_score": roc_auc_score,
     }
 
     trainer = Trainer(
@@ -89,9 +89,9 @@ if __name__ == "__main__":
         loss_fn=triplet_loss,
         optimizer=adamw,
         metrics=metrics,
-        log_path="bert/logs/bert_hist.csv",
+        log_path="bert/bert_hist.csv",
     )
 
-    trainer.train()
+    trainer.fit()
 
     torch.save(bert.state_dict(), "bert/bert_embeddings.pt")
