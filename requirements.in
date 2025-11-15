@@ -27,3 +27,4 @@ huggingface_hub
 kagglehub
 datasets
 sentence-transformers
+scikit-learn
