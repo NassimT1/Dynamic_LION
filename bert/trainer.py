@@ -166,7 +166,7 @@ class Trainer:
         with open(self.log_path, "a") as f:
             f.write(
                 # f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos},{pos_roc_aur},{neg_roc_aur}"
-                f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos},"
+                f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos}\n"
             )
         if verbose:
             epoch = self.curr_epoch
