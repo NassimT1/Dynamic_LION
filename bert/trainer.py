@@ -39,7 +39,7 @@ class Trainer:
 
         if self.log_path is not None:
             with open(self.log_path, "w") as f:
-                f.write(f"epoch,step,split,loss{metrics_str}")
+                f.write(f"epoch,step,split,loss{metrics_str}\n")
 
         self.curr_epoch = -1
         self.curr_step = -1
@@ -52,9 +52,11 @@ class Trainer:
                 self.validate()
 
     def train(self):
-        for i, (tag_embs, embs, neg_embs) in enumerate(self.train_loader):
+        for i, (tag_embs, embs, neg_embs) in tqdm(enumerate(self.train_loader)):
             self.curr_step = i
             tag_embs = {k: v.to(self.device) for k, v in tag_embs.items()}
+            embs = embs.to(self.device)
+            neg_embs = neg_embs.to(self.device)
             history = self.train_step(tag_embs, embs, neg_embs)
             self.history.append(history)
             self.log_step(history)
@@ -75,19 +77,17 @@ class Trainer:
         for (pos_k, pos_v), (neg_k, neg_v) in zip(
             pos_metrics.items(), neg_metrics.items()
         ):
-            history[pos_k] = pos_v
-            history[neg_k] = neg_v
+            history[pos_k] = pos_v.mean()
+            history[neg_k] = neg_v.mean()
 
         return history
 
-    def get_metrics(self, y_true, y_pred, is_pos: bool) -> dict[str, float]:
+    def get_metrics(self, y_true, y_pred, is_pos: bool) -> dict:
         """outputs dict[str, value]"""
         if is_pos:
             metric_str = "pos_"
         else:
             metric_str = "neg_"
-        y_true = y_true.detach().numpy()
-        y_pred = y_pred.detach().numpy()
         metrics = {}
         for metric, metric_fn in self.metrics.items():
             if metric == "roc_aur_score":
@@ -107,28 +107,20 @@ class Trainer:
 
         total_loss = 0
         total_pos_cos = 0
-        total_pos_roc_aur = 0
         total_neg_cos = 0
-        total_neg_roc_aur = 0
         for history in histories:
             total_loss += history["loss"]
             total_pos_cos += history["pos_cosine_similarity"]
-            total_pos_roc_aur += history["pos_roc_score"]
             total_neg_cos += history["neg_cosine_similarity"]
-            total_neg_roc_aur += history["neg_roc_score"]
         total_loss /= len(histories)
         total_pos_cos /= len(histories)
-        total_pos_roc_aur /= len(histories)
         total_neg_cos /= len(histories)
-        total_neg_roc_aur /= len(histories)
         history = {
             "epoch": self.curr_epoch,
             "step": -1,
             "split": "val",
             "pos_cosine_similarity": total_pos_cos,
             "neg_cosine_similarity": total_neg_cos,
-            "pos_roc_score": total_pos_roc_aur,
-            "neg_roc_score": total_neg_roc_aur,
         }
         self.log_step(history, True)
 
@@ -159,18 +151,10 @@ class Trainer:
         split = history["split"]
         loss = history["loss"]
         pos_cos = history["pos_cosine_similarity"]
-        # pos_roc_aur = history["pos_roc_score"]
         neg_cos = history["neg_cosine_similarity"]
-        # neg_roc_aur = history["neg_roc_score"]
 
         with open(self.log_path, "a") as f:
-            f.write(
-                # f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos},{pos_roc_aur},{neg_roc_aur}"
-                f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos}\n"
-            )
+            f.write(f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos}\n")
         if verbose:
             epoch = self.curr_epoch
-            print(
-                # f"Epoch {epoch}: train loss: {loss}, cos_sim: {pos_cos}, roc_aur: {pos_roc_aur}"
-                f"Epoch {epoch}: train loss: {loss}, cos_sim: {pos_cos}"
-            )
+            print(f"Epoch {epoch}: train loss: {loss}, cos_sim: {pos_cos}")
