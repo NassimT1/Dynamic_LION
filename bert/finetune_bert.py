@@ -28,8 +28,9 @@ def split_dataset(dataset: pd.DataFrame, test_ratio: float = 0.1):
     return train_tags, test_tags, train_v_caps, test_v_caps
 
 
-def prepare_dataset(path: str, test_ratio: float, batch_size: int):
+def prepare_dataset(path: str, test_ratio: float, dset_size: int, batch_size: int):
     dset = load_npz(path)
+    dset = dset[:dset_size]
     train_tags, test_tags, train_v_caps, test_v_caps = split_dataset(dset, test_ratio)
 
     train_dset = TagEmbeddingsDataset(train_tags, train_v_caps)
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     bert = prepare_model(cfg["model_id"], device)
 
     train_loader, val_loader = prepare_dataset(
-        cfg["dataset_path"], cfg["test_ratio"], cfg["batch_size"]
+        cfg["dataset_path"], cfg["test_ratio"], cfg["dset_size"], cfg["batch_size"]
     )
 
     triplet_loss = torch.nn.TripletMarginLoss()
