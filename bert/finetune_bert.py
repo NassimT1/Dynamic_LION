@@ -14,10 +14,12 @@ def load_npz(path: str):
     return df
 
 
-def split_dataset(dataset: pd.DataFrame, test_ratio: float = 0.1):
+def split_dataset(dataset: pd.DataFrame, dset_size: int, test_ratio: float = 0.1):
     df = dataset
     tags = df["text_embs"]
+    tags = tags[:dset_size]
     v_caps = df["vis_caps"]
+    v_caps = v_caps[:dset_size]
 
     idx = int(len(df) * test_ratio)
     train_tags = tags[idx:]
@@ -30,8 +32,9 @@ def split_dataset(dataset: pd.DataFrame, test_ratio: float = 0.1):
 
 def prepare_dataset(path: str, test_ratio: float, dset_size: int, batch_size: int):
     dset = load_npz(path)
-    dset = dset[:dset_size]
-    train_tags, test_tags, train_v_caps, test_v_caps = split_dataset(dset, test_ratio)
+    train_tags, test_tags, train_v_caps, test_v_caps = split_dataset(
+        dset, dset_size, test_ratio
+    )
 
     train_dset = TagEmbeddingsDataset(train_tags, train_v_caps)
     train_loader = DataLoader(train_dset, batch_size=batch_size, shuffle=True)
