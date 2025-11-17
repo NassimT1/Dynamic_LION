@@ -8,10 +8,7 @@ from tag_dataset import TagEmbeddingsDataset
 from bert_model import BertTagEmbeddings
 from trainer import Trainer
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 from transformers import AutoTokenizer
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics.pairwise import cosine_similarity
 
 
 def load_dataset(path: str = "Dataset/MS_COCO_2017_tags_embeddings.parquet"):
@@ -76,8 +73,7 @@ if __name__ == "__main__":
     triplet_loss = torch.nn.TripletMarginLoss()
     adamw = torch.optim.AdamW(bert.parameters(), lr=5e-5)
     metrics = {
-        "cosine_similarity": cosine_similarity,
-        # "roc_auc_score": roc_auc_score,
+        "cosine_similarity": torch.nn.CosineSimilarity(dim=1, eps=1e-6),
     }
 
     trainer = Trainer(
