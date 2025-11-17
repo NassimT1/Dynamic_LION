@@ -1,5 +1,6 @@
 dataset_path: "Dataset/anchor_pos.npz"
 batch_size: 16
+dset_size: 100000
 test_ratio: 0.05
 model_id: "bert-base-uncased"
 in_dim: 768
