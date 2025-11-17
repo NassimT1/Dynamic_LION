@@ -1,4 +1,4 @@
-dataset_path: "Dataset/MS_COCO_2017_tags_embeddings.parquet"
+dataset_path: "Dataset/anchor_pos.npz"
 batch_size: 16
 test_ratio: 0.05
 model_id: "bert-base-uncased"
