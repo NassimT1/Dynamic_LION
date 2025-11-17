@@ -30,7 +30,7 @@ def convert_dataset(
 
     assert len(tags) == len(v_caps)
     tags = tags[:dset_size]
-    v_caps = tags[:dset_size]
+    v_caps = v_caps[:dset_size]
 
     text_embs = []
     vis_caps = []
