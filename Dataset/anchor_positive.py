@@ -62,7 +62,7 @@ def string_to_embeddings(model, sentence: str):
 
 
 if __name__ == "__main__":
-    with open("bert/fine-tune.yaml" "r") as f:
+    with open("bert/fine-tune.yaml", "r") as f:
         cfg = yaml.safe_load(f)
     model = AutoTokenizer.from_pretrained("bert-base-uncased")
     src_path = "Dataset/MS_COCO_2017_tags_embeddings.parquet"
