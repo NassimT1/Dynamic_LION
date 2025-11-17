@@ -46,14 +46,6 @@ def convert_dataset(model: AutoTokenizer, src_path: str, dest_path: str):
         text_embs=np.array(text_embs),
         vis_caps=np.array(vis_caps),
     )
-    # out_df = pd.DataFrame(
-    #     {
-    #         "tag_embeddings": text_embs,
-    #         "v_cap_embeddings": vis_caps,
-    #     }
-    # )
-
-    # out_df.to_parquet(dest_path, index=False)
     return out_df
 
 
