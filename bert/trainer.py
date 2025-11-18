@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from typing import Callable
 
+from datetime import datetime
+from pathlib import Path
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -17,7 +19,7 @@ class Trainer:
         loss_fn,
         optimizer,
         metrics: dict[str, Callable],
-        log_path: str | None = "bert/bert_hist.csv",
+        log_path: str | None = "bert/logs/",
     ):
         self.model = model
         self.n_epochs = n_epochs
@@ -27,7 +29,6 @@ class Trainer:
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.metrics = metrics
-        self.log_path = log_path
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(self.device)
 
@@ -37,6 +38,9 @@ class Trainer:
         for metric in metrics.keys():
             metrics_str += f",pos_{metric},neg_{metric}"
 
+        log_dir = Path(log_path)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_path = log_dir / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
         if self.log_path is not None:
             with open(self.log_path, "w") as f:
                 f.write(f"epoch,step,split,loss{metrics_str}\n")
@@ -47,12 +51,12 @@ class Trainer:
     def fit(self):
         for i in tqdm(range(self.n_epochs)):
             self.curr_epoch = i
-            self.train()
             if i % self.validate_every == 0:
                 self.validate()
+            self.train()
 
     def train(self):
-        for i, (tag_embs, embs, neg_embs) in tqdm(enumerate(self.train_loader)):
+        for i, (tag_embs, embs, neg_embs) in enumerate(tqdm(self.train_loader)):
             self.curr_step = i
             tag_embs = {k: v.to(self.device) for k, v in tag_embs.items()}
             embs = embs.to(self.device)
@@ -77,8 +81,8 @@ class Trainer:
         for (pos_k, pos_v), (neg_k, neg_v) in zip(
             pos_metrics.items(), neg_metrics.items()
         ):
-            history[pos_k] = pos_v.mean()
-            history[neg_k] = neg_v.mean()
+            history[pos_k] = pos_v
+            history[neg_k] = neg_v
 
         return history
 
@@ -89,19 +93,21 @@ class Trainer:
         else:
             metric_str = "neg_"
         metrics = {}
-        for metric, metric_fn in self.metrics.items():
-            if metric == "roc_aur_score":
-                y_true = y_true[0]
-                y_pred = y_pred[0]
-            result = metric_fn(y_true, y_pred)
-            metrics[metric_str + metric] = result
+        with torch.no_grad():
+            for metric, metric_fn in self.metrics.items():
+                result = metric_fn(y_true, y_pred)
+                result = result.detach().cpu()
+                avg_result = float(result.mean())
+                metrics[metric_str + metric] = avg_result
         return metrics
 
     def validate(self):
+        histories = []
         with torch.no_grad():
-            histories = []
             for tag_embs, embs, neg_embs in self.val_loader:
                 tag_embs = {k: v.to(self.device) for k, v in tag_embs.items()}
+                embs = embs.to(self.device)
+                neg_embs = neg_embs.to(self.device)
                 history = self.validation_step(tag_embs, embs, neg_embs)
                 histories.append(history)
 
@@ -119,6 +125,7 @@ class Trainer:
             "epoch": self.curr_epoch,
             "step": -1,
             "split": "val",
+            "loss": total_loss,
             "pos_cosine_similarity": total_pos_cos,
             "neg_cosine_similarity": total_neg_cos,
         }
@@ -157,4 +164,4 @@ class Trainer:
             f.write(f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos}\n")
         if verbose:
             epoch = self.curr_epoch
-            print(f"Epoch {epoch}: train loss: {loss}, cos_sim: {pos_cos}")
+            print(f"Epoch {epoch}: train loss: {loss:.3f}, pos: {pos_cos:.3f}, neg: {neg_cos:.3f}")
