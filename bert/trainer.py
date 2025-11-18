@@ -164,4 +164,4 @@ class Trainer:
             f.write(f"{epoch},{step},{split},{loss},{pos_cos},{neg_cos}\n")
         if verbose:
             epoch = self.curr_epoch
-            print(f"Epoch {epoch}: train loss: {loss:.3f}, pos: {pos_cos:.3f}, neg: {neg_cos:.3f}")
+            print(f"Epoch {epoch}: {split} loss: {loss:.3f}, pos: {pos_cos:.3f}, neg: {neg_cos:.3f}")
