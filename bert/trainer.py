@@ -19,7 +19,7 @@ class Trainer:
         loss_fn,
         optimizer,
         metrics: dict[str, Callable],
-        log_path: str | None = "bert/logs/",
+        log_path: str = "bert/logs/",
     ):
         self.model = model
         self.n_epochs = n_epochs
@@ -104,7 +104,7 @@ class Trainer:
     def validate(self):
         histories = []
         with torch.no_grad():
-            for tag_embs, embs, neg_embs in self.val_loader:
+            for tag_embs, embs, neg_embs in tqdm(self.val_loader):
                 tag_embs = {k: v.to(self.device) for k, v in tag_embs.items()}
                 embs = embs.to(self.device)
                 neg_embs = neg_embs.to(self.device)
