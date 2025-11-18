@@ -21,7 +21,7 @@ def split_dataset(dataset: pd.DataFrame, dset_size: int, test_ratio: float = 0.1
     v_caps = df["vis_caps"]
     v_caps = v_caps[:dset_size]
 
-    idx = int(len(df) * test_ratio)
+    idx = int(len(tags) * test_ratio)
     train_tags = tags[idx:]
     test_tags = tags[:idx]
     train_v_caps = v_caps[idx:]
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     )
 
     triplet_loss = torch.nn.TripletMarginLoss()
-    adamw = torch.optim.AdamW(bert.parameters(), lr=5e-5)
+    adamw = torch.optim.AdamW(bert.parameters(), lr=cfg["lr"])
     metrics = {
         "cosine_similarity": torch.nn.CosineSimilarity(dim=1, eps=1e-6),
     }
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         loss_fn=triplet_loss,
         optimizer=adamw,
         metrics=metrics,
-        log_path="bert/bert_hist.csv",
+        log_path="bert/logs",
     )
 
     trainer.fit()
