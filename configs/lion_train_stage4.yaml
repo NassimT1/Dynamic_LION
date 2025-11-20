@@ -2,16 +2,19 @@ model:
   # Required model paths
   bert_model: "weights/bert-base-uncased/"
   vit_model: "weights/eva_vit_g.pth"
-  llm_model: "/path/to/flan-t5-xl/"
+  # llm_model: "weights/flan-t5-xl/"
+  llm_model: "weights/flan-t5-small/"
   ram_model: "weights/ram_swin_large_14m.pth"
+  dynamic_prompt_bert_path: "bert-base-uncased"
+  dynamic_prompt_bert_ckpt: "weights/bert_embeddings.pt"
 
   # Model behavior
   visual_input: "ALL"
   enable_semantic_tags: True
 
   # Load a pretrained checkpoint
-  load_pretrained: True
-  pretrained: /path/to/XL_stage3.pth
+  load_pretrained: False
+  pretrained: "weights/XL_stage3.pth"
   # stage3 checkpoint can be download at https://huggingface.co/daybreaksly/LION-FlanT5-XL-stage3
 
 run:
