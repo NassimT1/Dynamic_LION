@@ -35,8 +35,10 @@ class RAM(nn.Module):
         stage="eval",
     ):
         r"""The Recognize Anything Model (RAM) inference module.
-        RAM is a strong image tagging model, which can recognize any common category with high accuracy.
-        Described in the paper " Recognize Anything: A Strong Image Tagging Model" https://recognize-anything.github.io/
+        RAM is a strong image tagging model,
+        which can recognize any common category with high accuracy.
+        Described in the paper " Recognize Anything:
+        A Strong Image Tagging Model" https://recognize-anything.github.io/
 
         Args:
             med_config (str): path for the mixture of encoder-decoder model's configuration file
@@ -53,6 +55,8 @@ class RAM(nn.Module):
                 vision_config_path = f"{CONFIG_PATH}/configs/swin/config_swinB_224.json"
             elif image_size == 384:
                 vision_config_path = f"{CONFIG_PATH}/configs/swin/config_swinB_384.json"
+            else:
+                vision_config_path = ""
             vision_config = read_json(vision_config_path)
             assert image_size == vision_config["image_res"]
             # assert config['patch_size'] == 32
@@ -100,6 +104,8 @@ class RAM(nn.Module):
                 vision_config_path = f"{CONFIG_PATH}/configs/swin/config_swinL_224.json"
             elif image_size == 384:
                 vision_config_path = f"{CONFIG_PATH}/configs/swin/config_swinL_384.json"
+            else:
+                vision_config_path = ""
             vision_config = read_json(vision_config_path)
             assert image_size == vision_config["image_res"]
             # assert config['patch_size'] == 32
@@ -150,7 +156,8 @@ class RAM(nn.Module):
         # create tokenzier
         self.tokenizer = init_tokenizer(text_encoder_type)
 
-        # Tag2Text employ encoder-decoder architecture for image-tag-text generation: image-tag interaction encoder and image-tag-text decoder
+        # Tag2Text employ encoder-decoder architecture for image-tag-text generation:
+        # image-tag interaction encoder and image-tag-text decoder
         # create image-tag interaction encoder
         encoder_config = BertConfig.from_json_file(med_config)
         encoder_config.encoder_width = 512
@@ -200,10 +207,12 @@ class RAM(nn.Module):
 
         self.tagging_loss_function = AsymmetricLoss(gamma_neg=7, gamma_pos=0, clip=0.05)
 
-        # share weights of the lowest 2-layer of "image-tag interaction encoder" with the "image-tag recogntion decoder"
+        # share weights of the lowest 2-layer of "image-tag interaction encoder"
+        # with the "image-tag recogntion decoder"
         tie_encoder_decoder_weights(self.tag_encoder, self.tagging_head, "", " ")
         self.image_proj = nn.Linear(vision_width, 512)
-        # self.label_embed = nn.Parameter(torch.load(f'{CONFIG_PATH}/data/textual_label_embedding.pth',map_location='cpu').float())
+        # self.label_embed = nn.Parameter(torch.load(f'{CONFIG_PATH}/data/
+        #   textual_label_embedding.pth',map_location='cpu').float())
 
         # adjust thresholds for some tags
         self.class_threshold = torch.ones(self.num_class) * self.threshold
@@ -219,7 +228,8 @@ class RAM(nn.Module):
         tag_list = np.array(tag_list)
         return tag_list
 
-    # delete self-attention layer of image-tag recognition decoder to reduce computation, follower Query2Label
+    # delete self-attention layer of image-tag recognition decoder
+    # to reduce computation, follower Query2Label
     def del_selfattention(self):
         del self.tagging_head.embeddings
         for layer in self.tagging_head.encoder.layer:
@@ -232,7 +242,8 @@ class RAM(nn.Module):
         Args:
             image: type: torch.Tensor  shape: batch_size * 3 * 384 * 384
             caption: type: list[string]  len: batch_size
-            tag: type: torch.Tensor   shape: batch * class_num (e.g. 3429)   value: positive sample is 1.0, negative sample is 0.0
+            tag: type: torch.Tensor   shape: batch * class_num (e.g. 3429)
+            value: positive sample is 1.0, negative sample is 0.0
 
         Returns:
             loss: type: torch.Tensor
@@ -245,13 +256,13 @@ class RAM(nn.Module):
             image.device
         )
 
-        ##================= Distillation from CLIP ================##
+        # ================= Distillation from CLIP ================ #
         image_cls_embeds = image_embeds[:, 0, :]
         image_spatial_embeds = image_embeds[:, 1:, :]
 
         loss_dis = F.l1_loss(image_cls_embeds, clip_feature)
 
-        ##================= Image Tagging ================##
+        # ================= Image Tagging ================ #
         bs = image_embeds.shape[0]
         label_embed = label_embed.unsqueeze(0).repeat(bs, 1, 1)
 
@@ -267,7 +278,7 @@ class RAM(nn.Module):
 
         loss_tag = self.tagging_loss_function(logits, image_tag)
 
-        ##================= Image-Tag-Text Generation ================##
+        # ================= Image-Tag-Text Generation ================ #
         tag = parse_tag.cpu().numpy()
         tag_input = []
         for b in range(bs):
@@ -372,6 +383,68 @@ class RAM(nn.Module):
             tag_output_chinese.append(" | ".join(token_chinese))
 
         return tag_output, tag_output_chinese
+
+    def generate_tags_with_scores(self, image, threshold=0.5, top_k=40):
+        """
+        Generates tags and their confidence scores for dynamic prompt generation.
+        Returns a string, e.g., "dog: 0.9876543, ball: 0.9654321, ..."
+
+        Args:
+            image: Input image tensor
+            threshold: Minimum confidence score to include a tag
+            top_k: Maximum number of tags to consider (before threshold filtering)
+        """
+        self.eval()
+        with torch.no_grad():
+            # Get label embeddings and image embeddings
+            label_embed = torch.nn.functional.relu(self.wordvec_proj(self.label_embed))
+            image_embeds = self.image_proj(self.visual_encoder(image))
+            image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
+                image.device
+            )
+
+            bs = image_embeds.shape[0]
+            label_embed = label_embed.unsqueeze(0).repeat(bs, 1, 1)
+
+            # Run tagging head
+            tagging_embed = self.tagging_head(
+                encoder_embeds=label_embed,
+                encoder_hidden_states=image_embeds,
+                encoder_attention_mask=image_atts,
+                return_dict=False,
+                mode="tagging",
+            )
+
+            logits = self.fc(tagging_embed[0]).squeeze(-1)
+            scores = torch.sigmoid(logits)
+
+        # Process each image in batch
+        tags_with_scores_list = []
+        for i in range(bs):
+            # Get top-k most confident predictions
+            top_k_scores, top_k_indices = torch.topk(
+                scores[i], k=min(top_k, len(scores[i]))
+            )
+
+            # Filter by threshold
+            mask = top_k_scores > threshold
+            final_indices = top_k_indices[mask]
+            final_scores = top_k_scores[mask]
+
+            # Convert to CPU
+            final_indices_cpu = final_indices.cpu().numpy()
+            final_scores_cpu = final_scores.cpu().numpy()
+
+            # Build tag: score pairs, excluding delete_tag_index
+            tags_scores_pairs = []
+            for idx, score in zip(final_indices_cpu, final_scores_cpu):
+                if idx not in self.delete_tag_index:
+                    tag = self.tag_list[idx]
+                    tags_scores_pairs.append(f"{tag}: {score}")
+
+            tags_with_scores_list.append(", ".join(tags_scores_pairs))
+
+        return tags_with_scores_list
 
     def generate_tag_openset(
         self,
