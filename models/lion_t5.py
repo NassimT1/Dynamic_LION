@@ -105,6 +105,9 @@ class LIONT5InstructAdapter(BaseModel):
 
         self._init_llm(llm_model)
 
+        self.dynamic_prompt_projection = nn.Linear(
+            768, self.t5_model.config.hidden_size
+        )
         self.dynamic_prompt_bert_path = dynamic_prompt_bert_path
         self.dynamic_prompt_bert_ckpt = dynamic_prompt_bert_ckpt
         self._init_dynamic_prompt_generator()  # generate tags + confidence scores
