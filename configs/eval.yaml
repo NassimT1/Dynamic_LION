@@ -1,0 +1,32 @@
+model:
+  # Required model paths
+  bert_model: "weights/bert-base-uncased/"
+  vit_model: "weights/eva_vit_g.pth"
+  # llm_model: "weights/flan-t5-xl/"
+  llm_model: "weights/flan-t5-small/"
+  ram_model: "weights/ram_swin_large_14m.pth"
+  dynamic_prompt_bert_path: "bert-base-uncased"
+  dynamic_prompt_bert_ckpt: "weights/bert_embeddings.pt"
+
+run:
+  init_lr: 1e-5
+  min_lr: 0
+  weight_decay: 0.05
+  max_epoch: 10
+  num_workers: 8
+  warmup_steps: 1000
+  iters_per_epoch: 6000
+  batch_size_train: 16
+  mixed_precision: bf16
+  output_dir: outputs/lion_stage4
+  print_freq: 100
+
+eval_datasets:
+  - ann_path: "images/image_level_data.json"
+    vis_root: "images"
+    is_train: false
+    sample_ratio: 1
+  - ann_path: "images/region_level_data.json"
+    vis_root: "images"
+    is_train: false
+    sample_ratio: 1
