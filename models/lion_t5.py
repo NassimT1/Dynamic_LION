@@ -1,12 +1,10 @@
 import contextlib
 import logging
-import string
 from typing import Literal, Union, List
 from PIL.Image import Image
 
 import torch
 import torch.nn as nn
-from icecream import ic
 from torch.cuda.amp import autocast as autocast
 from transformers import BertTokenizer, T5TokenizerFast
 from transformers.modeling_outputs import BaseModelOutput
@@ -19,6 +17,7 @@ from models.modeling_t5 import T5Config, T5ForConditionalGeneration
 from models.Qformer import BertConfig, BertLMHeadModel
 from ram import get_transform
 from ram.models import ram
+from bert.bert_model import BertTagEmbeddings
 
 
 class LayerNorm(nn.LayerNorm):
@@ -28,11 +27,13 @@ class LayerNorm(nn.LayerNorm):
         orig_type = x.dtype
         ret = super().forward(x.type(torch.float32))
         return ret.type(orig_type)
-    
+
+
 def disabled_train(self, mode=True):
     """Overwrite model.train with this function to make sure train/eval mode
     does not change anymore."""
     return self
+
 
 @registry.register_model("lion_t5")
 class LIONT5InstructAdapter(BaseModel):
@@ -45,7 +46,7 @@ class LIONT5InstructAdapter(BaseModel):
         >>> from models import load_model
         >>> model = load_model("lion_t5", "flant5xl")
     """
-    
+
     PRETRAINED_MODEL_CONFIG_DICT = {
         "flant5xl": "configs/models/lion_flant5xl.yaml",
         "flant5xxl": "configs/models/lion_flant5xxl.yaml",
@@ -57,12 +58,13 @@ class LIONT5InstructAdapter(BaseModel):
         vit_model,
         llm_model,
         ram_model,
+        dynamic_prompt_bert_path,  # path to BERT model
+        dynamic_prompt_bert_ckpt,  # path to checkpoint
         max_txt_len=128,
         max_output_txt_len=128,
         visual_input: Literal["ALL", "QFORMER", "AGGREGATOR"] = "ALL",
         enable_semantic_tags=True,
         boost_lr_scale=1,
-
         img_size=224,
         drop_path_rate=0,
         use_grad_checkpoint=False,
@@ -74,7 +76,11 @@ class LIONT5InstructAdapter(BaseModel):
         assert bert_model is not None, "The path for bert model is not provided."
         assert vit_model is not None, "The path for vit model is not provided."
         assert llm_model is not None, "The path for llm model is not provided."
-        assert visual_input in ["ALL", "QFORMER", "AGGREGATOR"], f"Invalid visual input type: {visual_input}."
+        assert visual_input in [
+            "ALL",
+            "QFORMER",
+            "AGGREGATOR",
+        ], f"Invalid visual input type: {visual_input}."
         self.bert_model = bert_model
         self.visual_input = visual_input
         self.enable_semantic_tags = enable_semantic_tags
@@ -96,12 +102,21 @@ class LIONT5InstructAdapter(BaseModel):
             self.visual_encoder.train = disabled_train
             logging.info("freeze vision encoder")
         print("Loading VIT Done")
-        
+
         self._init_llm(llm_model)
-        
+
+        self.dynamic_prompt_projection = nn.Linear(
+            768, self.t5_model.config.hidden_size
+        )
+        self.dynamic_prompt_bert_path = dynamic_prompt_bert_path
+        self.dynamic_prompt_bert_ckpt = dynamic_prompt_bert_ckpt
+        self._init_dynamic_prompt_generator()  # generate tags + confidence scores
+
         if self.visual_input != "AGGREGATOR":
             print("Loading QFormer")
-            self.bert_tokenizer = BertTokenizer.from_pretrained(bert_model, truncation_side="left")
+            self.bert_tokenizer = BertTokenizer.from_pretrained(
+                bert_model, truncation_side="left"
+            )
             self.bert_tokenizer.add_special_tokens({"bos_token": "[DEC]"})
             self.Qformer, self.query_tokens = self._init_Qformer(
                 bert_model, num_query_token, self.visual_encoder.num_features
@@ -118,21 +133,36 @@ class LIONT5InstructAdapter(BaseModel):
             print("Loading Vision Aggregator")
             self.ln_adapter = LayerNorm(self.visual_encoder.num_features)
             self.adapter_proj = nn.Sequential(
-                nn.Linear(self.visual_encoder.num_features, self.visual_encoder.num_features * 4),
+                nn.Linear(
+                    self.visual_encoder.num_features,
+                    self.visual_encoder.num_features * 4,
+                ),
                 nn.GELU(),
-                nn.Linear(self.visual_encoder.num_features * 4, self.t5_model.config.hidden_size),
+                nn.Linear(
+                    self.visual_encoder.num_features * 4,
+                    self.t5_model.config.hidden_size,
+                ),
             )
-            self.fusion_adapter = FusionAdapter(num_blocks=2,dim=self.visual_encoder.num_features)
+            self.fusion_adapter = FusionAdapter(
+                num_blocks=2, dim=self.visual_encoder.num_features
+            )
             print("Loading Vision Aggregator Done")
 
         if self.enable_semantic_tags:
             tag_sp_token = "<extra_id_0>"
-            self.tag_softPrompt_id = self.t5_tokenizer.convert_tokens_to_ids(tag_sp_token)
-            self.tag_prompt = "According to <extra_id_0>, you are allowed to use or partially use the following tags: [{}]. "
-            self.soft_prompt_hint = nn.Parameter(torch.zeros(self.t5_model.config.hidden_size))
-            self.soft_prompt_hint.data.normal_(mean=0.0, std=self.t5_model.config.initializer_factor)
+            self.tag_softPrompt_id = self.t5_tokenizer.convert_tokens_to_ids(
+                tag_sp_token
+            )
+            # self.tag_prompt = "According to <extra_id_0>, you are allowed to use or partially use the following tags: [{}]. "
+            self.tag_prompt = tag_sp_token + " "
+            # self.soft_prompt_hint = nn.Parameter(
+            #     torch.zeros(self.t5_model.config.hidden_size)
+            # )
+            # self.soft_prompt_hint.data.normal_(
+            #     mean=0.0, std=self.t5_model.config.initializer_factor
+            # )
         logging.info(f"boost_lr_scale:{boost_lr_scale}")
-    
+
     def maybe_autocast(self, dtype=torch.bfloat16):
         # if on cpu, don't use autocast
         # if on gpu, use autocast with dtype if provided, otherwise use torch.float16
@@ -142,7 +172,7 @@ class LIONT5InstructAdapter(BaseModel):
             return torch.cuda.amp.autocast(dtype=dtype)
         else:
             return contextlib.nullcontext()
-        
+
     def _init_vision_encoder(
         self, model_path, img_size, drop_path_rate, use_grad_checkpoint, precision
     ):
@@ -151,8 +181,29 @@ class LIONT5InstructAdapter(BaseModel):
             img_size, drop_path_rate, use_grad_checkpoint, precision, model_path
         )
         return visual_encoder
-    
-    def _init_Qformer(self, bert_model, num_query_token, vision_width, cross_attention_freq=2):
+
+    def _init_dynamic_prompt_generator(self):
+        print("Loading Dynamic Prompt Generator (Fine-tuned BERT)")
+        self.dynamic_bert_tokenizer = BertTokenizer.from_pretrained(
+            self.dynamic_prompt_bert_path
+        )
+        self.dynamic_bert_model = BertTagEmbeddings(
+            model_id=self.dynamic_prompt_bert_path
+        )
+
+        state_dict = torch.load(self.dynamic_prompt_bert_ckpt, map_location="cpu")
+        self.dynamic_bert_model.load_state_dict(state_dict)
+
+        # Freeze BERT (inference)
+        for param in self.dynamic_bert_model.parameters():
+            param.requires_grad = False
+        self.dynamic_bert_model.eval()
+        self.dynamic_bert_model.train = disabled_train
+        print("Loading Dynamic Prompt Generator Done")
+
+    def _init_Qformer(
+        self, bert_model, num_query_token, vision_width, cross_attention_freq=2
+    ):
         encoder_config = BertConfig.from_pretrained(bert_model)
         encoder_config.encoder_width = vision_width
         encoder_config.add_cross_attention = True
@@ -164,19 +215,30 @@ class LIONT5InstructAdapter(BaseModel):
         )
         query_tokens.data.normal_(mean=0.0, std=encoder_config.initializer_range)
         return Qformer, query_tokens
-    
+
     def _init_llm(self, llm_model):
         print("Loading LLM")
-        self.t5_tokenizer = T5TokenizerFast.from_pretrained(llm_model, truncation_side='left')
-        self.t5_output_tokenizer = T5TokenizerFast.from_pretrained(llm_model, truncation_side='right')
+        self.t5_tokenizer = T5TokenizerFast.from_pretrained(
+            llm_model, truncation_side="left"
+        )
+        self.t5_output_tokenizer = T5TokenizerFast.from_pretrained(
+            llm_model, truncation_side="right"
+        )
 
         llm_config = T5Config.from_pretrained(llm_model)
         llm_config.dense_act_fn = "gelu"
         self.t5_model = T5ForConditionalGeneration.from_pretrained(
-            llm_model, config=llm_config, torch_dtype=torch.bfloat16,
+            llm_model,
+            config=llm_config,
+            torch_dtype=torch.bfloat16,
         )
-        set_adapter_t5(self.t5_model, self.t5_model.config.d_model, n=2 if self.visual_input=="ALL" else 1, bottleneck=64)
-        
+        set_adapter_t5(
+            self.t5_model,
+            self.t5_model.config.d_model,
+            n=2 if self.visual_input == "ALL" else 1,
+            bottleneck=64,
+        )
+
         for name, param in self.t5_model.named_parameters():
             if "adapter" in name:
                 if "router_ratio" in name and self.visual_input != "ALL":
@@ -186,51 +248,116 @@ class LIONT5InstructAdapter(BaseModel):
             else:
                 param.requires_grad = False
         print("Loading LLM Done")
-    
+
     def _init_ram(self):
         if self.ram_model == None:
             print("Loading RAM Model For Tag Generation")
-            self.ram_model = ram(pretrained=self.ram_path, image_size=384, vit="swin_l", text_encoder_type=self.bert_model).cuda()
+            self.ram_model = ram(
+                pretrained=self.ram_path,
+                image_size=384,
+                vit="swin_l",
+                text_encoder_type=self.bert_model,
+            ).cuda()
             self.ram_processor = get_transform()
             print("Loading RAM Model Done")
-    
-    def generate_tags(self, images:Union[List[Image], Image]) -> List[str]:
+
+    def generate_tags(self, images: Union[List[Image], Image]) -> List[str]:
         """
         Generate tags for provided images.
-        
+
         Args:
             images (Image or List[Image])
         Returns:
             tags (List[str])
         """
-        
+
         self._init_ram()
         if not isinstance(images, torch.Tensor):
             if isinstance(images, Image):
                 images = [images]
-            images = torch.stack([self.ram_processor(img) for img in images]).to(self.device)
+            images = torch.stack([self.ram_processor(img) for img in images]).to(
+                self.device
+            )
         tags = self.ram_model.generate_tag(images, threshold=0.85)[0]
-        return [t.replace(" |",",") for t in tags]
-    
+        return [t.replace(" |", ",") for t in tags]
+
     def _insert_tags(self, samples, prompt):
         if self.enable_semantic_tags:
             assert self.tag_prompt is not None, "Please provide Tags prompt."
-            if "tags" in samples:
-                tags = samples["tags"]
-            else:
-                tags = self.generate_tags(samples["ram_image"])
-            prompt = [self.tag_prompt.format(tags) + tin for tags, tin in zip(tags, prompt)]
+            self._init_ram()
+            # Generate tags with scores for the BERT model
+            tags_for_dynamic_prompt = self.ram_model.generate_tags_with_scores(
+                samples["ram_image"].to(self.device)
+            )
+
+            # Store the dynamic prompt input
+            samples["tags_for_dynamic_prompt"] = tags_for_dynamic_prompt
+            prompt = [self.tag_prompt + tin for tin in prompt]
         return prompt
-    
-    def _insert_softTagHint(self, samples, input_tokens, inputs_embeds):
-        if self.enable_semantic_tags:
-            bs = inputs_embeds.size(0)
-            sp_embeds = self.soft_prompt_hint.expand(bs, -1).to(inputs_embeds.dtype)
-            sp_index = (input_tokens.input_ids == self.tag_softPrompt_id).nonzero(as_tuple=True)
-            inputs_embeds[sp_index] = sp_embeds
+
+    def _generate_and_insert_dynamic_prompt(self, samples, input_tokens, inputs_embeds):
+        """
+        Generates a dynamic soft prompt embedding and inserts it into the main input embeddings.
+        It takes a tag-score string (ex: "dog: 0.9876543, ball: 0.9654321, ..."),
+        uses the fine-tuned BERT model
+        to get a 768-D embedding, then projects it to a 2048-D embedding for Flan-T5-XL.
+        Then inserts it into the input embeddings at the position of the <extra_id_0> token.
+
+        Args:
+            samples: Dictionary containing input samples, including "tags_for_dynamic_prompt"
+            input_tokens: Tokenized input tokens containing the <extra_id_0> placeholder
+            inputs_embeds: The input embeddings tensor where the dynamic prompt will be inserted
+        """
+
+        if not self.enable_semantic_tags:
+            return inputs_embeds
+
+        tag_strings = samples["tags_for_dynamic_prompt"]
+        device = inputs_embeds.device
+
+        with torch.no_grad():
+            bert_inputs = self.dynamic_bert_tokenizer(
+                tag_strings,
+                padding="longest",
+                truncation=True,
+                max_length=256,
+                return_tensors="pt",
+            ).to(device)
+
+            # Get [Batch, 768]
+            dynamic_prompt_embeds_768 = self.dynamic_bert_model(bert_inputs)
+
+        # Project [Batch, 768] -> [Batch, 2048]
+        dynamic_prompt_embeds = self.dynamic_prompt_projection(
+            dynamic_prompt_embeds_768
+        )
+        dynamic_prompt_embeds = dynamic_prompt_embeds.to(inputs_embeds.dtype)
+
+        # Get indices of where the tokens are (Batch_Index, Sequence_Index)
+        batch_indices, seq_indices = (
+            input_tokens.input_ids == self.tag_softPrompt_id
+        ).nonzero(as_tuple=True)
+
+        if batch_indices.numel() == 0:
+            logging.warning(
+                "No <extra_id_0> tokens found. Skipping dynamic prompt insertion."
+            )
+            return inputs_embeds
+
+        relevant_embeddings = dynamic_prompt_embeds[batch_indices]
+        inputs_embeds[batch_indices, seq_indices] = relevant_embeddings
+
         return inputs_embeds
-    
+
     def get_optimizer_params(self, weight_decay, lr_scale=1):
+        for n, p in self.named_parameters():
+            p.requires_grad = False  # Freeze all parameters first
+
+        for n, p in self.named_parameters():
+            if "dynamic_prompt_projection" in n or "adapter" in n:
+                p.requires_grad = (
+                    True  # Unfreeze dynamic prompt projection and adapters
+                )
         p_wd, p_non_wd = [], []
         p_boost, p_boost_non_wd = [], []
         boost_name = []
@@ -251,32 +378,50 @@ class LIONT5InstructAdapter(BaseModel):
         optim_params = [
             {"params": p_wd, "weight_decay": weight_decay, "lr_scale": lr_scale},
             {"params": p_non_wd, "weight_decay": 0, "lr_scale": lr_scale},
-            {"params": p_boost, "weight_decay": weight_decay, "lr_scale": lr_scale*self.boost_lr_scale},
-            {"params": p_boost_non_wd, "weight_decay": 0, "lr_scale": lr_scale*self.boost_lr_scale},
+            {
+                "params": p_boost,
+                "weight_decay": weight_decay,
+                "lr_scale": lr_scale * self.boost_lr_scale,
+            },
+            {
+                "params": p_boost_non_wd,
+                "weight_decay": 0,
+                "lr_scale": lr_scale * self.boost_lr_scale,
+            },
         ]
         return optim_params
 
     def encode_img(self, image, question):
         with self.maybe_autocast(dtype=torch.bfloat16):
-            image_embeds, intermediate = self.visual_encoder(image, return_intermediate=True)
+            image_embeds, intermediate = self.visual_encoder(
+                image, return_intermediate=True
+            )
             if self.visual_input != "QFORMER":
-                adapter_embeds = self.ln_adapter(self.fusion_adapter(intermediate[38], [intermediate[28],intermediate[18]]))
+                adapter_embeds = self.ln_adapter(
+                    self.fusion_adapter(
+                        intermediate[38], [intermediate[28], intermediate[18]]
+                    )
+                )
                 adapter_embeds = self.adapter_proj(adapter_embeds)
             if self.visual_input != "AGGREGATOR":
                 image_embeds = self.ln_vision(image_embeds)
         if self.visual_input != "AGGREGATOR":
             query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
-            image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(image.device)
+            image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(
+                image.device
+            )
 
             text_Qformer = self.bert_tokenizer(
                 question,
-                padding='longest',
+                padding="longest",
                 truncation=True,
                 max_length=self.max_txt_len,
                 return_tensors="pt",
             ).to(image.device)
-            query_atts = torch.ones(query_tokens.size()[:-1], dtype=torch.long).to(image.device)
-            Qformer_atts = torch.cat([query_atts,text_Qformer.attention_mask],dim=1)
+            query_atts = torch.ones(query_tokens.size()[:-1], dtype=torch.long).to(
+                image.device
+            )
+            Qformer_atts = torch.cat([query_atts, text_Qformer.attention_mask], dim=1)
 
             query_output = self.Qformer.bert(
                 text_Qformer.input_ids,
@@ -286,7 +431,9 @@ class LIONT5InstructAdapter(BaseModel):
                 encoder_attention_mask=image_atts,
                 return_dict=True,
             )
-            input_qformer = self.t5_proj(query_output.last_hidden_state[:,:query_tokens.size(1),:])
+            input_qformer = self.t5_proj(
+                query_output.last_hidden_state[:, : query_tokens.size(1), :]
+            )
 
         match self.visual_input:
             case "AGGREGATOR":
@@ -294,12 +441,14 @@ class LIONT5InstructAdapter(BaseModel):
             case "QFORMER":
                 inputs_t5 = input_qformer
             case "ALL":
-                inputs_t5 = torch.cat([input_qformer, adapter_embeds],dim=1)
+                inputs_t5 = torch.cat([input_qformer, adapter_embeds], dim=1)
             case _:
-                raise NotImplementedError(f"Visual input type {self.visual_input} is not supported.")
-                
-        atts_t5 = torch.ones(inputs_t5.size()[:-1],dtype=torch.long).to(image.device)
-    
+                raise NotImplementedError(
+                    f"Visual input type {self.visual_input} is not supported."
+                )
+
+        atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long).to(image.device)
+
         return inputs_t5, atts_t5
 
     def forward(self, samples):
@@ -320,13 +469,16 @@ class LIONT5InstructAdapter(BaseModel):
                 max_length=self.max_output_txt_len,
                 return_tensors="pt",
             ).to(self.device)
-            
+
             targets = output_tokens.input_ids.masked_fill(
                 output_tokens.input_ids == self.t5_tokenizer.pad_token_id, -100
             )
 
             text_embeds = self.t5_model.encoder.embed_tokens(input_tokens.input_ids)
-            text_embeds = self._insert_softTagHint(samples, input_tokens, text_embeds)
+            # text_embeds = self._insert_softTagHint(samples, input_tokens, text_embeds)
+            text_embeds = self._generate_and_insert_dynamic_prompt(
+                samples, input_tokens, text_embeds
+            )
             text_atts = input_tokens.attention_mask
 
             input_embeds = torch.cat([img_embeds, text_embeds], dim=1)
@@ -358,22 +510,27 @@ class LIONT5InstructAdapter(BaseModel):
         num_captions=1,
         temperature=1,
     ):
-        img_embeds, img_atts = self.encode_img(samples["image"].to(self.device), samples["question"])
+        img_embeds, img_atts = self.encode_img(
+            samples["image"].to(self.device), samples["question"]
+        )
         prompt = self._insert_tags(samples, samples["question"])
         input_tokens = self.t5_tokenizer(
-            prompt,
-            padding="longest",
-            return_tensors="pt"
+            prompt, padding="longest", return_tensors="pt"
         ).to(self.device)
 
         with self.maybe_autocast(dtype=torch.bfloat16):
             text_embeds = self.t5_model.encoder.embed_tokens(input_tokens.input_ids)
-            text_embeds = self._insert_softTagHint(samples, input_tokens, text_embeds)
+            # text_embeds = self._insert_softTagHint(samples, input_tokens, text_embeds)
+            text_embeds = self._generate_and_insert_dynamic_prompt(
+                samples, input_tokens, text_embeds
+            )
             text_atts = input_tokens.attention_mask
-            
+
             inputs_embeds = torch.cat([img_embeds, text_embeds], dim=1)
             input_atts = torch.cat([img_atts, text_atts], dim=1)
-            set_router_idx(self.t5_model, int(samples.get("category") != "region_level"))
+            set_router_idx(
+                self.t5_model, int(samples.get("category") != "region_level")
+            )
             outputs = self.t5_model.generate(
                 inputs_embeds=inputs_embeds,
                 attention_mask=input_atts,
@@ -399,31 +556,34 @@ class LIONT5InstructAdapter(BaseModel):
         vit_model = cfg.get("vit_model")
         llm_model = cfg.get("llm_model")
         ram_model = cfg.get("ram_model")
-        
+        dynamic_prompt_bert_path = cfg.get("dynamic_prompt_bert_path")
+        dynamic_prompt_bert_ckpt = cfg.get("dynamic_prompt_bert_ckpt")
+
         max_txt_len = cfg.get("max_txt_len", 128)
         max_output_txt_len = cfg.get("max_output_txt_len", 128)
         visual_input = cfg.get("visual_input", "ALL")
         enable_semantic_tags = cfg.get("enable_semantic_tags", True)
         boost_lr_scale = cfg.get("boost_lr_scale", 1.0)
-        
+
         img_size = cfg.get("image_size", 224)
         drop_path_rate = cfg.get("drop_path_rate", 0)
         use_grad_checkpoint = cfg.get("use_grad_checkpoint", False)
         vit_precision = cfg.get("vit_precision", "fp16")
         freeze_vit = cfg.get("freeze_vit", True)
         num_query_token = cfg.get("num_query_token", 32)
-        
+
         model = cls(
             bert_model=bert_model,
             vit_model=vit_model,
             llm_model=llm_model,
             ram_model=ram_model,
+            dynamic_prompt_bert_path=dynamic_prompt_bert_path,
+            dynamic_prompt_bert_ckpt=dynamic_prompt_bert_ckpt,
             max_txt_len=max_txt_len,
             max_output_txt_len=max_output_txt_len,
             visual_input=visual_input,
             enable_semantic_tags=enable_semantic_tags,
             boost_lr_scale=boost_lr_scale,
-            
             img_size=img_size,
             drop_path_rate=drop_path_rate,
             use_grad_checkpoint=use_grad_checkpoint,
