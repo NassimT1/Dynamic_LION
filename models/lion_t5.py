@@ -350,31 +350,48 @@ class LIONT5InstructAdapter(BaseModel):
         return inputs_embeds
 
     def get_optimizer_params(self, weight_decay, lr_scale=1):
-        for n, p in self.named_parameters():
-            p.requires_grad = False  # Freeze all parameters first
+        for name, param in self.named_parameters():
+            param.requires_grad = False  # Freeze all parameters first
+        for name, param in self.named_parameters():
+            if "dynamic_prompt_projection" in name:
+                param.requires_grad = True  # Unfreeze dynamic prompt projection
+            elif "adapter" in name:
+                param.requires_grad = True  # Unfreeze adapters
+            elif (
+                "Qformer" in name
+                or "query_tokens" in name
+                or "t5_proj" in name
+                or "ln_vision" in name
+            ):  # Unfreeze vision-language parts as well to improve performance
+                param.requires_grad = True
 
-        for n, p in self.named_parameters():
-            if "dynamic_prompt_projection" in n or "adapter" in n:
-                p.requires_grad = (
-                    True  # Unfreeze dynamic prompt projection and adapters
-                )
         p_wd, p_non_wd = [], []
         p_boost, p_boost_non_wd = [], []
-        boost_name = []
+        p_new, p_new_non_wd = [], []  # Lists for new projection layer
+
+        # Higher learning rate (for dynamic_prompt_projection only, the rest use base lr)
+        new_lr_scale = 5.0
+
         for n, p in self.named_parameters():
             if not p.requires_grad:
-                continue  # frozen weights
-            if "fusion_adapter" in n:
+                continue
+
+            if "dynamic_prompt_projection" in n:
+                if p.ndim < 2 or "bias" in n or "ln" in n or "bn" in n:
+                    p_new_non_wd.append(p)
+                else:
+                    p_new.append(p)
+            elif "fusion_adapter" in n:
                 if p.ndim < 2 or "bias" in n or "ln" in n or "bn" in n:
                     p_boost_non_wd.append(p)
                 else:
                     p_boost.append(p)
-                boost_name.append(n)
             else:
                 if p.ndim < 2 or "bias" in n or "ln" in n or "bn" in n:
                     p_non_wd.append(p)
                 else:
                     p_wd.append(p)
+
         optim_params = [
             {"params": p_wd, "weight_decay": weight_decay, "lr_scale": lr_scale},
             {"params": p_non_wd, "weight_decay": 0, "lr_scale": lr_scale},
@@ -388,6 +405,18 @@ class LIONT5InstructAdapter(BaseModel):
                 "weight_decay": 0,
                 "lr_scale": lr_scale * self.boost_lr_scale,
             },
+            # --- New LR for dynamic prompt projection layer ---
+            {
+                "params": p_new,
+                "weight_decay": weight_decay,
+                "lr_scale": lr_scale * new_lr_scale,
+            },
+            {
+                "params": p_new_non_wd,
+                "weight_decay": 0,
+                "lr_scale": lr_scale * new_lr_scale,
+            },
+            # --------------------------------------------------
         ]
         return optim_params
 
