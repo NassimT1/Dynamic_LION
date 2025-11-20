@@ -1,0 +1,10 @@
+model:
+  bert_model: "weights/bert-base-uncased/"
+  vit_model: "weights/eva_vit_g.pth"
+  llm_model: "weights/flan-t5-small/"
+  ram_model: weights/ram_swin_large_14m.pth"
+  visual_input: "ALL"
+  enable_semantic_tags: True
+
+  load_pretrained: True
+  pretrained: checkpoint_9.pth
