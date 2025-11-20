@@ -8,6 +8,14 @@ model:
   dynamic_prompt_bert_path: "bert-base-uncased"
   dynamic_prompt_bert_ckpt: "weights/bert_embeddings.pt"
 
+  # Model behavior
+  visual_input: "ALL"
+  enable_semantic_tags: True
+
+  # Load a pretrained checkpoint
+  load_pretrained: True
+  pretrained: "weights/checkpoint_9.pth"
+
 run:
   init_lr: 1e-5
   min_lr: 0
