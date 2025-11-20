@@ -433,7 +433,7 @@ class RAM(nn.Module):
 
             # Convert to CPU
             final_indices_cpu = final_indices.cpu().numpy()
-            final_scores_cpu = final_scores.cpu().numpy()
+            final_scores_cpu = final_scores.detach().float().cpu().numpy()
 
             # Build tag: score pairs, excluding delete_tag_index
             tags_scores_pairs = []
