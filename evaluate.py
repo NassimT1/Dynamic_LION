@@ -1,10 +1,13 @@
 import os
+import torch
 import argparse
 import logging
 from models.lion_t5 import LIONT5InstructAdapter  # register
+from preprocessors.lion_preprocessors import ImageEvalProcessor
 from common.registry import registry
 from omegaconf import OmegaConf
 from datetime import datetime
+from PIL import Image
 
 
 def build_model(cfg):
@@ -53,21 +56,40 @@ def parse_args():
 def main():
     args = parse_args()
     cfg = OmegaConf.load(args.cfg_path)
-    # out_base = cfg.run.get("output_dir", "outputs/lion_train")
-    # job_id = datetime.now().strftime("eval_%Y%m%d%H")
-    # out_dir = os.path.join(out_base, job_id)
-    # os.makedirs(out_dir, exist_ok=True)
 
-    # accelerator = Accelerator(
-    #     log_with=["tensorboard"],
-    #     project_dir=out_dir,
-    #     mixed_precision=cfg.run.get("mixed_precision", "bf16"),
-    # )
-    # accelerator.init_trackers(project_name="lion_train")
-
-    # logging.basicConfig(level=logging.INFO)
     model = build_model(cfg)
-    # eval_datasets = build_eval_datasets(cfg)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
+    processor = ImageEvalProcessor()
+
+    path1 = "images/coco/images/train2014/COCO_train2014_000000024935.jpg"
+    path2 = "images/coco/images/test2014/COCO_test2014_000000000001.jpg"
+    img1 = Image.open(path1).convert("RGB")
+    img2 = Image.open(path2).convert("RGB")
+    proc1 = processor(img1)
+    proc2 = processor(img2)
+
+    t1 = model.generate_tags_with_scores(img1)
+    t2 = model.generate_tags_with_scores(img2)
+
+    question = "Please describe the image using a single short sentence."
+
+    output1 = model.generate({
+        "image": proc1.unsqueeze(0).cuda(),
+        "question": [question],
+        "tags_for_dynamic_prompt": t1,
+        "category": "image_level",
+    })
+    output2 = model.generate({
+        "image": proc2.unsqueeze(0).cuda(),
+        "question": [question],
+        "tags_for_dynamic_prompt": t2,
+        "category": "image_level",
+    })
+
+    print(output1)
+    print(output2)
 
 
 if __name__ == "__main__":
