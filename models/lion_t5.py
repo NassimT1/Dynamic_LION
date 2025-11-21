@@ -281,17 +281,31 @@ class LIONT5InstructAdapter(BaseModel):
         tags = self.ram_model.generate_tag(images, threshold=0.85)[0]
         return [t.replace(" |", ",") for t in tags]
 
+    def generate_tags_with_scores(self, images) -> List[str]:
+        self._init_ram()
+        if not isinstance(images, torch.Tensor):
+            if isinstance(images, Image):
+                images = [images]
+            images = torch.stack([self.ram_processor(img) for img in images]).to(
+                self.device
+            )
+        tags_with_score = self.ram_model.generate_tags_with_scores(images, threshold=0.85)
+        return tags_with_score
+
+
     def _insert_tags(self, samples, prompt):
         if self.enable_semantic_tags:
             assert self.tag_prompt is not None, "Please provide Tags prompt."
             self._init_ram()
             # Generate tags with scores for the BERT model
-            tags_for_dynamic_prompt = self.ram_model.generate_tags_with_scores(
-                samples["ram_image"].to(self.device)
-            )
-
-            # Store the dynamic prompt input
-            samples["tags_for_dynamic_prompt"] = tags_for_dynamic_prompt
+            if "tags_for_dynamic_prompt" in samples:
+                tags_for_dynamic_prompt = samples["tags_for_dynamic_prompt"]
+            else:
+                tags_for_dynamic_prompt = self.ram_model.generate_tags_with_scores(
+                    samples["ram_image"].to(self.device)
+                )
+                # Store the dynamic prompt input
+                samples["tags_for_dynamic_prompt"] = tags_for_dynamic_prompt
             prompt = [self.tag_prompt + tin for tin in prompt]
         return prompt
 
