@@ -51,9 +51,9 @@ class Trainer:
     def fit(self):
         for i in tqdm(range(self.n_epochs)):
             self.curr_epoch = i
+            self.train()
             if i % self.validate_every == 0:
                 self.validate()
-            self.train()
 
     def train(self):
         for i, (tag_embs, embs, neg_embs) in enumerate(tqdm(self.train_loader)):

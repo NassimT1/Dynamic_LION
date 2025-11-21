@@ -73,7 +73,7 @@ if __name__ == "__main__":
     trainer = Trainer(
         model=bert,
         n_epochs=n_epochs,
-        validate_every=5,
+        validate_every=1,
         train_loader=train_loader,
         val_loader=val_loader,
         loss_fn=triplet_loss,
