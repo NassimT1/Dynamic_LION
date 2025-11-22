@@ -1,3 +1,5 @@
+use_lion: False
+
 model:
   # Required model paths
   bert_model: "weights/bert-base-uncased/"
