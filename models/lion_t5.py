@@ -71,8 +71,10 @@ class LIONT5InstructAdapter(BaseModel):
         vit_precision="fp16",
         freeze_vit=True,
         num_query_token=32,
+        use_lion: bool = False,
     ):
         super().__init__()
+        self.use_lion = use_lion
         assert bert_model is not None, "The path for bert model is not provided."
         assert vit_model is not None, "The path for vit model is not provided."
         assert llm_model is not None, "The path for llm model is not provided."
@@ -153,14 +155,16 @@ class LIONT5InstructAdapter(BaseModel):
             self.tag_softPrompt_id = self.t5_tokenizer.convert_tokens_to_ids(
                 tag_sp_token
             )
-            # self.tag_prompt = "According to <extra_id_0>, you are allowed to use or partially use the following tags: [{}]. "
-            self.tag_prompt = tag_sp_token + " "
-            # self.soft_prompt_hint = nn.Parameter(
-            #     torch.zeros(self.t5_model.config.hidden_size)
-            # )
-            # self.soft_prompt_hint.data.normal_(
-            #     mean=0.0, std=self.t5_model.config.initializer_factor
-            # )
+            if self.use_lion:
+                self.tag_prompt = "According to <extra_id_0>, you are allowed to use or partially use the following tags: [{}]. "
+                self.soft_prompt_hint = nn.Parameter(
+                    torch.zeros(self.t5_model.config.hidden_size)
+                )
+                self.soft_prompt_hint.data.normal_(
+                    mean=0.0, std=self.t5_model.config.initializer_factor
+                )
+            else:
+                self.tag_prompt = tag_sp_token + " "
         logging.info(f"boost_lr_scale:{boost_lr_scale}")
 
     def maybe_autocast(self, dtype=torch.bfloat16):
@@ -289,24 +293,35 @@ class LIONT5InstructAdapter(BaseModel):
             images = torch.stack([self.ram_processor(img) for img in images]).to(
                 self.device
             )
-        tags_with_score = self.ram_model.generate_tags_with_scores(images, threshold=0.85)
+        tags_with_score = self.ram_model.generate_tags_with_scores(
+            images, threshold=0.85
+        )
         return tags_with_score
-
 
     def _insert_tags(self, samples, prompt):
         if self.enable_semantic_tags:
             assert self.tag_prompt is not None, "Please provide Tags prompt."
-            self._init_ram()
-            # Generate tags with scores for the BERT model
-            if "tags_for_dynamic_prompt" in samples:
-                tags_for_dynamic_prompt = samples["tags_for_dynamic_prompt"]
+            if self.use_lion:
+                if "tags" in samples:
+                    tags = samples["tags"]
+                else:
+                    tags = self.generate_tags(samples["ram_image"])
+                prompt = [
+                    self.tag_prompt.format(tags) + tin
+                    for tags, tin in zip(tags, prompt)
+                ]
             else:
-                tags_for_dynamic_prompt = self.ram_model.generate_tags_with_scores(
-                    samples["ram_image"].to(self.device)
-                )
-                # Store the dynamic prompt input
-                samples["tags_for_dynamic_prompt"] = tags_for_dynamic_prompt
-            prompt = [self.tag_prompt + tin for tin in prompt]
+                self._init_ram()
+                # Generate tags with scores for the BERT model
+                if "tags_for_dynamic_prompt" in samples:
+                    tags_for_dynamic_prompt = samples["tags_for_dynamic_prompt"]
+                else:
+                    tags_for_dynamic_prompt = self.ram_model.generate_tags_with_scores(
+                        samples["ram_image"].to(self.device)
+                    )
+                    # Store the dynamic prompt input
+                    samples["tags_for_dynamic_prompt"] = tags_for_dynamic_prompt
+                prompt = [self.tag_prompt + tin for tin in prompt]
         return prompt
 
     def _generate_and_insert_dynamic_prompt(self, samples, input_tokens, inputs_embeds):
@@ -489,10 +504,14 @@ class LIONT5InstructAdapter(BaseModel):
             )
 
             text_embeds = self.t5_model.encoder.embed_tokens(input_tokens.input_ids)
-            # text_embeds = self._insert_softTagHint(samples, input_tokens, text_embeds)
-            text_embeds = self._generate_and_insert_dynamic_prompt(
-                samples, input_tokens, text_embeds
-            )
+            if self.use_lion:
+                text_embeds = self._insert_softTagHint(
+                    samples, input_tokens, text_embeds
+                )
+            else:
+                text_embeds = self._generate_and_insert_dynamic_prompt(
+                    samples, input_tokens, text_embeds
+                )
             text_atts = input_tokens.attention_mask
 
             input_embeds = torch.cat([img_embeds, text_embeds], dim=1)
@@ -534,10 +553,14 @@ class LIONT5InstructAdapter(BaseModel):
 
         with self.maybe_autocast(dtype=torch.bfloat16):
             text_embeds = self.t5_model.encoder.embed_tokens(input_tokens.input_ids)
-            # text_embeds = self._insert_softTagHint(samples, input_tokens, text_embeds)
-            text_embeds = self._generate_and_insert_dynamic_prompt(
-                samples, input_tokens, text_embeds
-            )
+            if self.use_lion:
+                text_embeds = self._insert_softTagHint(
+                    samples, input_tokens, text_embeds
+                )
+            else:
+                text_embeds = self._generate_and_insert_dynamic_prompt(
+                    samples, input_tokens, text_embeds
+                )
             text_atts = input_tokens.attention_mask
 
             inputs_embeds = torch.cat([img_embeds, text_embeds], dim=1)
@@ -566,6 +589,8 @@ class LIONT5InstructAdapter(BaseModel):
 
     @classmethod
     def from_config(cls, cfg):
+        use_lion = cfg.get("use_lion")
+
         bert_model = cfg.get("bert_model")
         vit_model = cfg.get("vit_model")
         llm_model = cfg.get("llm_model")
@@ -587,6 +612,7 @@ class LIONT5InstructAdapter(BaseModel):
         num_query_token = cfg.get("num_query_token", 32)
 
         model = cls(
+            use_lion=use_lion,
             bert_model=bert_model,
             vit_model=vit_model,
             llm_model=llm_model,
