@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex main"] 1763613491 "main.aux" "main.bbl" "main" 1763613592 0
-  "./ref.bib" 1763613471 1538 9f98f9a618d9705e78012ab5c2958ea0 ""
+["bibtex main"] 1764103649 "main.aux" "main.bbl" "main" 1764103650 0
+  "./ref.bib" 1764103647 3209 6e0e3a4d6d77b6bd182aec054384ccc3 ""
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/ieeetran/IEEEtran.bst" 1440712899 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "main.aux" 1763613591 3689 0b72ceae7d5ee386d8e3b139c22c6e95 "pdflatex"
+  "main.aux" 1764102523 5291 601d2ef98b5be48e07a0d220a28076f1 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1763613591 "main.tex" "main.pdf" "main" 1763613592 0
+["pdflatex"] 1764102521 "main.tex" "main.pdf" "main" 1764103650 0
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/courier/pcrr7t.tfm" 1136768653 960 379cc0019370a9e0208a0a3f949f847a ""
@@ -103,6 +103,7 @@
   "/usr/local/texlive/2023/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def" 1680206705 29768 5600b3a98028e2e01b60e7f98fbf4b9c ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg" 1279039959 678 4792914a8f45be57bb98413425e4c7af ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/letltxmacro/letltxmacro.sty" 1575499565 5766 13a9e8766c47f30327caf893ece86ac8 ""
+  "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/omlptm.fd" 1137110629 577 008ea4bacb8ccf8c2a39dc94e000ef1f ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/omsptm.fd" 1137110629 576 95c2c0baea9c719a4be29a3d4122498b ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ot1pcr.fd" 1137110629 985 1ed784d7bfe47179f3550d2303b073f8 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ot1ptm.fd" 1137110629 961 15056f4a61917ceed3a44e4ac11fcc52 ""
@@ -114,12 +115,14 @@
   "/usr/local/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1680704661 4622752 02d70c555fb1ccbaa0b6f1f330ce9b3b ""
   "/usr/local/texlive/2023/texmf-var/web2c/pdftex/pdflatex.fmt" 1680704698 7885263 f051b9da261bf5393ae70cb570e0c51a ""
   "/usr/local/texlive/2023/texmf.cnf" 1678822455 577 1b2b1af17af2508fb20dd85783af4050 ""
-  "IEEEtran.cls" 1763628320 281957 5b2e4fa15b0f7eabb840ebf67df4c0f7 ""
-  "fig1.png" 1763628320 4535 3b4c70b1b9361fad686e8d234c8fe506 ""
-  "main.aux" 1763613591 3689 0b72ceae7d5ee386d8e3b139c22c6e95 "pdflatex"
-  "main.bbl" 1763613491 2005 a81617b6bfe77207098363a25c8960f1 "bibtex main"
-  "main.out" 1763613591 2190 72976715d9f42dfe79e1dc5e01dce3f6 "pdflatex"
-  "main.tex" 1763613589 16370 6b7571fcb075f27faac7ab7906348147 ""
+  "IEEEtran.cls" 1764094458 281957 5b2e4fa15b0f7eabb840ebf67df4c0f7 ""
+  "fig1.png" 1764094458 4535 3b4c70b1b9361fad686e8d234c8fe506 ""
+  "imgs/lion_overview.png" 1764097849 2150528 71a2f186ad4de5820d3057daa4f5cbe5 ""
+  "imgs/prompting.png" 1764098981 2131686 e6ba9604174e52c07ad204c560eb37bd ""
+  "main.aux" 1764102523 5291 601d2ef98b5be48e07a0d220a28076f1 "pdflatex"
+  "main.bbl" 1764103650 3072 17871e54174bd6364be2d2ba849a9ba4 "bibtex main"
+  "main.out" 1764102523 2229 c890819959155a1e582d1fe37e185b02 "pdflatex"
+  "main.tex" 1764102519 18729 29b5b4e597069db1b104b4b923cae28b ""
   (generated)
   "main.aux"
   "main.log"

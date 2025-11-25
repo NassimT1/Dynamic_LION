@@ -37,7 +37,8 @@ The performance of LLMs with multimodal data continues to improve by leveraging 
 One recent work, the dual-\textit{L}evel v\textit{I}sual kn\textit{O}wledge e\textit{N}hanced Multimodal Large Language Model (LION), demonstrates improvements over existing MLLMs in visual knowledge.
 LION incorporates visual knowledge through the progressive integration of fine-grained spatial-aware features and the use of soft prompting with high-level semantic visual evidence.
 Despite these advancements, the soft prompting technique remains underexplored.
-In this report, 
+As mentioned from the LION paper, soft prompting method still has the danger from hallucination to some degree.
+In this report, we propose a dynamic soft prompting to mitigate the object hallucination problem, and explore its effectiveness.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -54,12 +55,40 @@ One recent work, dual-\textbf{L}evel v\textbf{I}sual kn\textbf{O}wledge e\textbf
 Specifically, the authors propose a stage-wise instruction-tuning strategy to perform image-level and region-level VL tasks.
 It learns the visual knowledge separately by using two different adapters, and then a router module is used to aggregate the knowledge from image-level and region-level adapters into a single vision knowledge representation.
 In addition, LION employs a very well-known foundation model, Recognize Anything Model (RAM) \cite{ram}, as a vision extractor to obtain image tags off-the-shelf.
+Tags extracted from RAM are used to generate a soft prompt, which is the key component of the paper.
+A soft prompt is an instruction template with image tags and trainable parameters representing the prompt.
+The authors suggest the template as such,
+\textit{``According to \textless hint\textgreater, you are allowed to use the following tags:''},
+where the \textit{\textless hint\textgreater} will be replaced with a trainable soft prompt, and the tags from RAM will be inserted at the end of the template.
+In this way, the model can avoid potential negative influence by the imperfect predictions from RAM.
+
+\begin{figure*}
+  \centerline{\includegraphics[width=\textwidth]{imgs/lion_overview.png}}
+  \caption{Overview of the original LION \cite{chen2024lion}. The model extracts visual features from Q-Former, and combines them with fine-grained spatial-aware features from the vision aggregator. The Mixture-of-Adapters with a router in the frozen LLM dynamically fuses visual knowledge learned from different visual branches and LLM adapters based on the task types (image-level and region-level).}
+  \label{fig:overview}
+\end{figure*}
+
+\section{Limitations of the Previous Work}
+
+While LION achieves high performance in image captioning, visual question answering (VQA), and visual grounding tasks, object hallucination is one of the most concerned issue from the paper, as the authors mentioned.
+This challenge is due to an imperfect vision model such as RAM,
+
+To be more specific on soft prompting, the model employs RAM to extract image tags in order to generate soft prompt.
+However, since vision models such as RAM are often imperfect, potential object hallucination problem is inevitable.
+Not only does the performance of off-the-shelf vision models contribute to the problem, but over-reliance on statistical bias \cite{hal_bias} and unimodal priors \cite{unimodal_bias, unimodal_2} can also lead to challenges such as visual hallucinations.
+Nevertheless, foundation models in MLLMs have shown impressive performance with ease of use \cite{foundationMLLM}.
+
+soft prompting technique is still underexplored.
+In order to avoid object hallucinations while maintaining foundation models, 
+
+Not only that, the soft prompting technique from the paper uses a simple image tag information,
 
 
 \section{Related Work}
-W. ~Fang \textit{et al.}~\cite{fang2025guided}
+W.~Fang \textit{et al.}~\cite{fang2025guided}
+Y.~Zeng \textit{et al.}~\cite{contrastive} fine-grained contrastive learning
 
-\subsection{Maintaining the Integrity of the Specifications}
+\subsection{Soft Prompting}
 
 The IEEEtran class file is used to format your paper and style the text. All margins, 
 column widths, line spaces, and text fonts are prescribed; please do not 
@@ -76,6 +105,13 @@ formatting. Please note sections \ref{AA}--\ref{SCM} below for more information 
 proofreading, spelling and grammar.
 
 \subsection{Model Architecture}
+
+\begin{figure}
+  \centerline{\includegraphics[width=\linewidth]{imgs/prompting.png}}
+  \caption{Comparison between the original LION's soft prompting and the proposed dynamic soft prompting.}
+  \label{fig:soft_prompt_comp}
+\end{figure}
+
 
 Keep your text and graphic files separate until after the text has been 
 formatted and styled. Do not number text heads---{\LaTeX} will do that 

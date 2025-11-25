@@ -16,23 +16,37 @@
 \citation{kuang2025natural}
 \citation{chen2024lion}
 \citation{ram}
+\citation{chen2024lion}
+\citation{chen2024lion}
+\citation{hal_bias}
+\citation{unimodal_bias,unimodal_2}
 \citation{fang2025guided}
+\citation{contrastive}
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{section.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{1}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Maintaining the Integrity of the Specifications}{1}{subsection.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {III}Proposed Method}{1}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Model Architecture}{1}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Abbreviations and Acronyms}{1}{subsection.3.2}\protected@file@percent }
-\newlabel{AA}{{\mbox  {III-B}}{1}{Abbreviations and Acronyms}{subsection.3.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Units}{1}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Limitations of the Previous Work}{1}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Related Work}{1}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Soft Prompting}{1}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Proposed Method}{1}{section.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of the original LION \cite  {chen2024lion}. The model extracts visual features from Q-Former, and combines them with fine-grained spatial-aware features from the vision aggregator. The Mixture-of-Adapters with a router in the frozen LLM dynamically fuses visual knowledge learned from different visual branches and LLM adapters based on the task types (image-level and region-level).}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:overview}{{1}{2}{Overview of the original LION \cite {chen2024lion}. The model extracts visual features from Q-Former, and combines them with fine-grained spatial-aware features from the vision aggregator. The Mixture-of-Adapters with a router in the frozen LLM dynamically fuses visual knowledge learned from different visual branches and LLM adapters based on the task types (image-level and region-level)}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Comparison between the original LION's soft prompting and the proposed dynamic soft prompting.}}{2}{figure.2}\protected@file@percent }
+\newlabel{fig:soft_prompt_comp}{{2}{2}{Comparison between the original LION's soft prompting and the proposed dynamic soft prompting}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Model Architecture}{2}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Abbreviations and Acronyms}{2}{subsection.4.2}\protected@file@percent }
+\newlabel{AA}{{\mbox  {IV-B}}{2}{Abbreviations and Acronyms}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Units}{2}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Equations}{2}{subsection.4.4}\protected@file@percent }
+\newlabel{eq}{{1}{2}{Equations}{equation.4.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}\LaTeX  -Specific Advice}{2}{subsection.4.5}\protected@file@percent }
 \citation{b7}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Equations}{2}{subsection.3.4}\protected@file@percent }
-\newlabel{eq}{{1}{2}{Equations}{equation.3.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}\LaTeX  -Specific Advice}{2}{subsection.3.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-F}}Some Common Mistakes}{2}{subsection.3.6}\protected@file@percent }
-\newlabel{SCM}{{\mbox  {III-F}}{2}{Some Common Mistakes}{subsection.3.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-G}}Authors and Affiliations}{2}{subsection.3.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-H}}Identify the Headings}{2}{subsection.3.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Some Common Mistakes}{3}{subsection.4.6}\protected@file@percent }
+\newlabel{SCM}{{\mbox  {IV-F}}{3}{Some Common Mistakes}{subsection.4.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Authors and Affiliations}{3}{subsection.4.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Identify the Headings}{3}{subsection.4.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-I}}Figures and Tables}{3}{subsection.4.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {IV-I}0a}Positioning Figures and Tables}{3}{paragraph.4.9.0.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Table Type Styles}}{3}{table.1}\protected@file@percent }
+\newlabel{tab1}{{I}{3}{Table Type Styles}{table.1}{}}
 \citation{b1}
 \citation{b2}
 \citation{b3}
@@ -53,14 +67,14 @@
 \bibcite{kuang2025natural}{1}
 \bibcite{chen2024lion}{2}
 \bibcite{ram}{3}
-\bibcite{fang2025guided}{4}
+\bibcite{hal_bias}{4}
+\bibcite{unimodal_bias}{5}
+\bibcite{unimodal_2}{6}
+\bibcite{fang2025guided}{7}
+\bibcite{contrastive}{8}
 \bibstyle{IEEEtran}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-I}}Figures and Tables}{3}{subsection.3.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {III-I}0a}Positioning Figures and Tables}{3}{paragraph.3.9.0.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Table Type Styles}}{3}{table.1}\protected@file@percent }
-\newlabel{tab1}{{I}{3}{Table Type Styles}{table.1}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Example of a figure caption.}}{3}{figure.1}\protected@file@percent }
-\newlabel{fig}{{1}{3}{Example of a figure caption}{figure.1}{}}
-\@writefile{toc}{\contentsline {section}{References}{3}{section*.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{3}{section*.4}\protected@file@percent }
-\gdef \@abspage@last{3}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Example of a figure caption.}}{4}{figure.3}\protected@file@percent }
+\newlabel{fig}{{3}{4}{Example of a figure caption}{figure.3}{}}
+\@writefile{toc}{\contentsline {section}{References}{4}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{4}{section*.4}\protected@file@percent }
+\gdef \@abspage@last{4}

@@ -31,7 +31,21 @@ G.~Chen, L.~Shen, R.~Shao, X.~Deng, and L.~Nie, ``Lion: Empowering multimodal la
 Y.~Zhang, X.~Huang, J.~Ma, Z.~Li, Z.~Luo, Y.~Xie, Y.~Qin, T.~Luo, Y.~Li, S.~Liu, Y.~Guo, and L.~Zhang, ``Recognize anything: A strong image tagging model,'' 2023. [Online]. Available: \url{https://arxiv.org/abs/2306.03514}
 \BIBentrySTDinterwordspacing
 
+\bibitem{hal_bias}
+V.~Agarwal, R.~Shetty, and M.~Fritz, ``Towards causal vqa: Revealing and reducing spurious correlations by invariant and covariant semantic editing,'' in \emph{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, 2020, pp. 9690--9698.
+
+\bibitem{unimodal_bias}
+V.~Gupta, Z.~Li, A.~Kortylewski, C.~Zhang, Y.~Li, and A.~Yuille, ``Swapmix: Diagnosing and regularizing the over-reliance on visual context in visual question answering,'' in \emph{Proceedings of the IEEE/CVF conference on computer vision and pattern recognition}, 2022, pp. 5078--5088.
+
+\bibitem{unimodal_2}
+Y.~Han, L.~Nie, J.~Yin, J.~Wu, and Y.~Yan, ``Visual perturbation-aware collaborative learning for overcoming the language prior problem,'' \emph{arXiv preprint arXiv:2207.11850}, 2022.
+
 \bibitem{fang2025guided}
 W.~Fang, Q.~Wu, J.~Chen, and Y.~Xue, ``guided mllm reasoning: Enhancing mllm with knowledge and visual notes for visual question answering,'' in \emph{Proceedings of the Computer Vision and Pattern Recognition Conference}, 2025, pp. 19\,597--19\,607.
+
+\bibitem{contrastive}
+\BIBentryALTinterwordspacing
+Y.~Zeng, X.~Zhang, and H.~Li, ``Multi-grained vision language pre-training: Aligning texts with visual concepts,'' 2022. [Online]. Available: \url{https://arxiv.org/abs/2111.08276}
+\BIBentrySTDinterwordspacing
 
 \end{thebibliography}
