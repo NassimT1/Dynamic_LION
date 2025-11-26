@@ -8,57 +8,49 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: ref.bib
-Warning--I didn't find a database entry for "b7"
-Warning--I didn't find a database entry for "b1"
-Warning--I didn't find a database entry for "b2"
-Warning--I didn't find a database entry for "b3"
-Warning--I didn't find a database entry for "b4"
-Warning--I didn't find a database entry for "b5"
-Warning--I didn't find a database entry for "b6"
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
 
 Done.
-You've used 8 entries,
+You've used 9 entries,
             4087 wiz_defined-function locations,
-            871 strings with 9249 characters,
-and the built_in function-call counts, 7334 in all, are:
-= -- 522
-> -- 249
-< -- 56
-+ -- 143
-- -- 60
-* -- 375
-:= -- 997
-add.period$ -- 16
-call.type$ -- 8
-change.case$ -- 8
+            873 strings with 9463 characters,
+and the built_in function-call counts, 8183 in all, are:
+= -- 598
+> -- 278
+< -- 59
++ -- 157
+- -- 67
+* -- 414
+:= -- 1120
+add.period$ -- 18
+call.type$ -- 9
+change.case$ -- 9
 chr.to.int$ -- 147
-cite$ -- 8
-duplicate$ -- 489
-empty$ -- 586
-format.name$ -- 56
-if$ -- 1697
+cite$ -- 9
+duplicate$ -- 559
+empty$ -- 644
+format.name$ -- 64
+if$ -- 1900
 int.to.chr$ -- 0
-int.to.str$ -- 8
-missing$ -- 99
-newline$ -- 51
-num.names$ -- 8
-pop$ -- 272
+int.to.str$ -- 9
+missing$ -- 113
+newline$ -- 54
+num.names$ -- 9
+pop$ -- 303
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 531
+skip$ -- 604
 stack$ -- 0
-substring$ -- 382
-swap$ -- 409
-text.length$ -- 7
+substring$ -- 397
+swap$ -- 467
+text.length$ -- 10
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 8
+type$ -- 9
 warning$ -- 0
-while$ -- 28
-width$ -- 9
-write$ -- 97
-(There were 7 warnings)
+while$ -- 30
+width$ -- 10
+write$ -- 108
