@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.4.5)  26 NOV 2025 03:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.4.5)  26 NOV 2025 17:13
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -432,18 +432,18 @@ File: imgs/prompting.png Graphic file (type png)
 <use imgs/prompting.png>
 Package pdftex.def Info: imgs/prompting.png  used on input line 111.
 (pdftex.def)             Requested size: 252.0pt x 254.52312pt.
-<imgs/cosine.png, id=85, 723.4227pt x 836.8866pt>
-File: imgs/cosine.png Graphic file (type png)
-<use imgs/cosine.png>
-Package pdftex.def Info: imgs/cosine.png  used on input line 122.
-(pdftex.def)             Requested size: 252.0pt x 291.52278pt.
 
 Underfull \vbox (badness 1152) has occurred while \output is active []
 
-<imgs/loss_converge.png, id=86, 850.6179pt x 505.1673pt>
+<imgs/cosine.png, id=86, 723.4227pt x 836.8866pt>
+File: imgs/cosine.png Graphic file (type png)
+<use imgs/cosine.png>
+Package pdftex.def Info: imgs/cosine.png  used on input line 123.
+(pdftex.def)             Requested size: 252.0pt x 291.52278pt.
+<imgs/loss_converge.png, id=87, 850.6179pt x 505.1673pt>
 File: imgs/loss_converge.png Graphic file (type png)
 <use imgs/loss_converge.png>
-Package pdftex.def Info: imgs/loss_converge.png  used on input line 130.
+Package pdftex.def Info: imgs/loss_converge.png  used on input line 131.
 (pdftex.def)             Requested size: 252.0pt x 149.65514pt.
  [2 <./imgs/lion_overview.png> <./imgs/prompting.png> <./imgs/cosine.png>] (./main.bbl)
 
@@ -462,18 +462,18 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: 882FAF9ED1DD4D039A811142D76DA9D5;1798.
  ) 
 Here is how much of TeX's memory you used:
- 11322 strings out of 476017
- 177988 string characters out of 5789769
+ 11323 strings out of 476017
+ 178008 string characters out of 5789769
  1874666 words of memory out of 5000000
- 31581 multiletter control sequences out of 15000+600000
+ 31582 multiletter control sequences out of 15000+600000
  553083 words of font info for 107 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,8n,76p,535b,439s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (3 pages, 4395288 bytes).
+Output written on main.pdf (3 pages, 4396832 bytes).
 PDF statistics:
- 157 PDF objects out of 1000 (max. 8388607)
- 131 compressed objects within 2 object streams
+ 159 PDF objects out of 1000 (max. 8388607)
+ 133 compressed objects within 2 object streams
  41 named destinations out of 1000 (max. 500000)
  117 words of extra memory for PDF output out of 10000 (max. 10000000)
 

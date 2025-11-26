@@ -105,7 +105,7 @@ separate text file. Complete all content and organizational editing before
 formatting.
 proofreading, spelling and grammar.
 
-\subsection{Model Architecture}
+\subsection{Model Architecture}\label{model_architecture}
 
 \begin{figure}
   \centerline{\includegraphics[width=\linewidth]{imgs/prompting.png}}
@@ -115,6 +115,8 @@ proofreading, spelling and grammar.
 
 
 \section{Experiments}
+
+As discussed from the Section~\ref{model_architecture}, we'll first look at the fine-tuning of the BERT model.
 
 \subsection{Fine-tuning BERT}
 
@@ -142,6 +144,15 @@ We evaluate the dynamic soft prompting method's performance on two types of imag
 For image captioning, COCO caption \cite{cococap} and TextCaps \cite{textcaps} datasets are used, and report CIDEr as the evaluation metric.
 Also for VQA task, OKVQA \cite{okvqa} and AOKVQA \cite{aokvqa} datasets are used, and its performance is measured by Top-1 Accuracy metric.
 
+The models used for the comparison are denoted as LION-4B, LION-12B, LION-small, and custom LION-small (ours).
+Each model is based off of a Flan-T5 model with different sizes of parameters. 
+LION-4B and LION-12B are equipped with Flan-T5-XL (4B parameters) and Flan-T5-XXL (11B parameters), respectively.
+LION-small and custom LION-small use the same LLM, the Flan-T5-small model (80M parameters).
+Obviously, the higher the number of parameters the model has (\textit{i.e.}, LION-4B and LION-12B), the more likely the model is to perform better.
+Our goal is to while outperform LION-small model, also achieve a certain level of performance comparable to LION-4B or even LION-12B.
+
+As shown in Table~\ref{tab:image-level}, LION-4B and LION-12B achieves the best performance.
+
 
 \begin{table}
   \centering
@@ -149,12 +160,13 @@ Also for VQA task, OKVQA \cite{okvqa} and AOKVQA \cite{aokvqa} datasets are used
     \Xhline{2\arrayrulewidth}
     Model & COCOCap & TextCaps & OKVQA & AOKVQA \\
     \hline\hline
-    LION-small & 69.09 & 26.45 & 0 & 0 \\
-    LION-small (ours) & 0 & 0 & 0 & 0 \\
-    LION-4B & 138.20 & 104.87 & 51.08 & 59.98 \\
-    LION-12B & 139.25 & 108.76 & 57.33 & 60.87 \\
-    \Xhline{2\arrayrulewidth} \\
+    LION-small & 69.09 & 26.45 & 2.3\% & 1.8\% \\
+    LION-small (ours) & 21.40 & 4.68 & 16.3\% & 11.3\% \\
+    LION-4B & 138.20 & 104.87 & 51.08\% & 59.98\% \\
+    LION-12B & 139.25 & 108.76 & 57.33\% & 60.87\% \\
+    \Xhline{2\arrayrulewidth}
   \end{tabular}
+  \newline
   \caption{Comparison on image captioning and VQA.}
   \label{tab:image-level}
 \end{table}
