@@ -3,6 +3,7 @@
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 \usepackage{cite}
 \usepackage{hyperref}
+\usepackage{makecell}
 
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -101,7 +102,7 @@ Please do not revise any of the current designations.
 \section{Proposed Method}
 Before you begin to format your paper, first write and save the content as a 
 separate text file. Complete all content and organizational editing before 
-formatting. Please note sections \ref{AA}--\ref{SCM} below for more information on 
+formatting.
 proofreading, spelling and grammar.
 
 \subsection{Model Architecture}
@@ -128,12 +129,35 @@ proofreading, spelling and grammar.
 \begin{figure}
   \centerline{\includegraphics[width=\linewidth]{imgs/loss_converge.png}}
   \caption{Training results of original LION model and custom LION model (\textit{i.e.}, dynamic soft prompting).}
-  \label{fig:bert_finetune}
+  \label{fig:loss_comp}
 \end{figure}
 
 Keep your text and graphic files separate until after the text has been 
 formatted and styled. Do not number text heads---{\LaTeX} will do that 
 for you.
+
+\subsection{Evaluations on Image-Level VL Tasks}
+
+We evaluate the dynamic soft prompting method's performance on two types of image-level VL tasks, which are image captioning and VQA.
+For image captioning, COCO caption \cite{cococap} and TextCaps \cite{textcaps} datasets are used, and report CIDEr as the evaluation metric.
+Also for VQA task, OKVQA \cite{okvqa} and AOKVQA \cite{aokvqa} datasets are used, and its performance is measured by Top-1 Accuracy metric.
+
+
+\begin{table}
+  \centering
+  \begin{tabular}{l|cc|cc}
+    \Xhline{2\arrayrulewidth}
+    Model & COCOCap & TextCaps & OKVQA & AOKVQA \\
+    \hline\hline
+    LION-small & 69.09 & 26.45 & 0 & 0 \\
+    LION-small (ours) & 0 & 0 & 0 & 0 \\
+    LION-4B & 138.20 & 104.87 & 51.08 & 59.98 \\
+    LION-12B & 139.25 & 108.76 & 57.33 & 60.87 \\
+    \Xhline{2\arrayrulewidth} \\
+  \end{tabular}
+  \caption{Comparison on image captioning and VQA.}
+  \label{tab:image-level}
+\end{table}
 
 
 \begin{thebibliography}{00}
